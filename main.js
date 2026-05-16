@@ -5,7 +5,7 @@
    ╚══════════════════════════════════════════════════════════╝
 ================================================================ */
 const CFG = {
-  API_KEY: "",
+  // API_KEY tidak diperlukan lagi — auth ditangani server Vercel (aman!)
   LOGO_URL:        "https://zygotic-purple-toaenlilms.edgeone.app/IMG_20260321_005057.png",
   AVATAR_AI_URL:   "https://zygotic-purple-toaenlilms.edgeone.app/IMG_20260321_005057.png",
   AVATAR_USER_URL: "https://explicit-scarlet-mvdzff6kpt.edgeone.app/IMG-20260406-WA0038.jpg",
@@ -62,7 +62,7 @@ const CFG = {
    *
    * MATIIN MAINTENANCE: kosongkan MAINTENANCE_TEXT
    */
-  MAINTENANCE_TEXT: "Aplikasi HC AI resmi dihentikan secara permanen Keputusan ini diambil karena berbagai kendala yang belum dapat kami perbaiki secara maksimal Developer sudah berusaha melakukan perbaikan namun hasilnya belum memuaskan Selain itu tingginya ekspektasi dan kurangnya kesabaran dari sebagian pengguna membuat proses pengembangan menjadi tidak kondusif Dengan pertimbangan tersebut layanan HC AI resmi kami hentikan secara permanen Ke depannya kami harap pengguna dapat lebih memahami bahwa setiap proses membutuhkan waktu dan kesabaran Terima kasih untuk yang tetap mendukung",
+  MAINTENANCE_TEXT: "",
   MAINTENANCE_MODE: "manual",       // "auto" = dengan timer | "manual" = sampai dimatiin manual
   MAINTENANCE_DURATION_HOURS: 2,
   MAINTENANCE_START: "",
@@ -1437,31 +1437,13 @@ async function sendMessage() {
   if (chatHistory.length > 30) chatHistory = chatHistory.slice(chatHistory.length - 30);
   addTyping(prompt);
   try {
-    // Smart model routing
-    function pickModel(p, hasImage) {
-      if (hasImage) return 'openrouter/free';
-      const lower = (p||'').toLowerCase();
-      if (/script|html|css|javascript|python|lua|kode|coding|website|buat\s*(web|app|gui|script)|bikin|generate\s*code/.test(lower)) {
-        return 'openrouter/free';
-      }
-      return 'openrouter/free';
-    }
     const hasImage = userContent.some(x => x.type === 'image_url');
-    const chosenModel = pickModel(prompt, hasImage);
-    const chosenTemp = 0.3; // selalu akurat untuk semua mode
-    // Gunakan proxy Vercel (/api/chat) kalau ada, fallback ke direct
-    const apiEndpoint = window.location.hostname === 'localhost' || window.location.hostname.includes('vercel.app') || window.location.hostname.includes('.app')
-      ? '/api/chat'
-      : 'https://openrouter.ai/api/v1/chat/completions';
-    const res = await fetch(apiEndpoint, {
+    const chosenTemp = 0.5;
+    // Selalu pakai proxy Vercel — device UUID aman di server, tidak perlu API key di frontend
+    const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json',
-        // Kalau pakai proxy Vercel, tidak perlu Authorization header
-        ...(apiEndpoint.startsWith('/api') ? {} : { 'Authorization': `Bearer ${CFG.API_KEY}` })
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: chosenModel,
-        max_tokens: 1500,
         temperature: chosenTemp,
         messages: [{ role: 'system', content: SYSTEM }, ...chatHistory]
       })
