@@ -6,14 +6,14 @@
 ================================================================ */
 const CFG = {
   // API_KEY tidak diperlukan lagi — auth ditangani server Vercel (aman!)
-  LOGO_URL:        "https://zygotic-purple-toaenlilms.edgeone.app/IMG_20260321_005057.png",
-  AVATAR_AI_URL:   "https://zygotic-purple-toaenlilms.edgeone.app/IMG_20260321_005057.png",
+  LOGO_URL:        "https://married-beige-jymjbokr0h.edgeone.app/file_00000000f21072088b47ac7583ad4cee.png",
+  AVATAR_AI_URL:   "https://married-beige-jymjbokr0h.edgeone.app/file_00000000f21072088b47ac7583ad4cee.png",
   AVATAR_USER_URL: "https://explicit-scarlet-mvdzff6kpt.edgeone.app/IMG-20260406-WA0038.jpg",
   INFO_AVATAR_URL: "https://crucial-amber-e9vl4tleum.edgeone.app/IMG_20260403_194236.jpg",
-  BG_HOME:   "https://motionless-amethyst-yof1wnijxp.edgeone.app/IMG_20260411_024028.jpg",
-  BG_INFO:   "https://motionless-amethyst-yof1wnijxp.edgeone.app/IMG_20260411_024028.jpg",
-  BG_UPDATE: "https://motionless-amethyst-yof1wnijxp.edgeone.app/IMG_20260411_024028.jpg",
-  BG_SAVE:   "https://motionless-amethyst-yof1wnijxp.edgeone.app/IMG_20260411_024028.jpg",
+  BG_HOME:   "https://amateur-scarlet-hcgklokuxa.edgeone.app/file_000000005a107208a35adaf05fea5b23.png",
+  BG_INFO:   "https://amateur-scarlet-hcgklokuxa.edgeone.app/file_000000005a107208a35adaf05fea5b23.png",
+  BG_UPDATE: "https://amateur-scarlet-hcgklokuxa.edgeone.app/file_000000005a107208a35adaf05fea5b23.png",
+  BG_SAVE:   "https://amateur-scarlet-hcgklokuxa.edgeone.app/file_000000005a107208a35adaf05fea5b23.png",
   LINK_WA:      "https://whatsapp.com/channel/0029Vb5aoKwEwEjpsmaQol3A",
   LINK_IG:      "https://linktr.ee/renzzzz1572",
   LINK_TIKTOK:  "https://tiktok.com/@renzzzzofc18",
@@ -67,6 +67,23 @@ const CFG = {
   MAINTENANCE_DURATION_HOURS: 2,
   MAINTENANCE_START: "",
   MAINTENANCE_BG: "",
+
+  /* ─── BETA OVERLAY ───
+   * SHOW_BETA: true = tampil, false = matiin
+   */
+  SHOW_BETA: true,
+
+  /* ─── IKLAN / AD CONFIG ───
+   * Konfigurasi iklan sekarang ada di file: iklan.js
+   * Di sini hanya referensi — JANGAN edit di sini!
+   * Edit SHOW_ADS, ADS_LIST dll di iklan.js
+   */
+
+  /* ─── REDEEM CODES ───
+   * Kode redeem sekarang ada di file: redemcode.js
+   * Hadiah/reward ada di file: backpackredem.js
+   * JANGAN edit di sini — edit di kedua file itu!
+   */
 
 UPDATES: [
     {
@@ -794,6 +811,8 @@ window.addEventListener('DOMContentLoaded', () => {
   setInterval(updateClock, 1000);
   initVoice();
   checkUpdateBadge();
+  initBetaOverlay();
+  initAdOverlay();
 });
 
 function checkUpdateBadge() {
@@ -804,6 +823,266 @@ function checkUpdateBadge() {
     badge.textContent = newCount > 9 ? '9+' : newCount;
     badge.classList.add('show');
   }
+}
+
+/* ================================================================
+   BETA OVERLAY
+================================================================ */
+function initBetaOverlay() {
+  if (!CFG.SHOW_BETA) return;
+  const seen = sessionStorage.getItem('hc_beta_seen');
+  if (seen) return;
+  setTimeout(() => {
+    const ov = document.getElementById('betaOverlay');
+    if (ov) ov.classList.add('show');
+  }, 3200); // muncul setelah intro selesai
+}
+function closeBetaOverlay() {
+  const ov = document.getElementById('betaOverlay');
+  if (!ov) return;
+  ov.style.animation = 'none';
+  ov.style.opacity = '0';
+  ov.style.transition = 'opacity .3s ease';
+  setTimeout(() => { ov.classList.remove('show'); ov.style.opacity = ''; ov.style.transition = ''; }, 320);
+  sessionStorage.setItem('hc_beta_seen', '1');
+}
+
+/* ================================================================
+   AD OVERLAY
+================================================================ */
+let adIndex = 0;
+let adAutoTimer = null;
+
+function initAdOverlay() {
+  // Ambil config dari iklan.js (IKLAN_CFG). Kalau SHOW_ADS false → iklan tidak tampil.
+  const iklanCfg = (typeof IKLAN_CFG !== 'undefined') ? IKLAN_CFG : null;
+  const adsArr = iklanCfg ? iklanCfg.ADS_LIST : (CFG.ADS || []);
+  const showAds = iklanCfg ? iklanCfg.SHOW_ADS : true;
+  if (!showAds || !adsArr || adsArr.length === 0) return;
+  const seen = sessionStorage.getItem('hc_ad_seen');
+  if (seen) return;
+  const adDelay = iklanCfg ? iklanCfg.AD_DELAY_MS : (CFG.AD_DELAY_MS || 1500);
+  const adInterval = iklanCfg ? iklanCfg.AD_AUTO_INTERVAL_MS : (CFG.AD_AUTO_INTERVAL_MS || 5000);
+  const delay = (CFG.SHOW_BETA ? 3200 + 1000 : 0) + adDelay;
+  setTimeout(() => {
+    renderAd(0);
+    const ov = document.getElementById('adOverlay');
+    if (ov) ov.classList.add('show');
+    if (adInterval > 0 && adsArr.length > 1) {
+      adAutoTimer = setInterval(() => {
+        adIndex = (adIndex + 1) % adsArr.length;
+        renderAd(adIndex);
+      }, adInterval);
+    }
+  }, delay);
+}
+
+function renderAd(idx) {
+  const iklanCfg = (typeof IKLAN_CFG !== 'undefined') ? IKLAN_CFG : null;
+  const ads = iklanCfg ? iklanCfg.ADS_LIST : (CFG.ADS || []);
+  if (!ads || !ads[idx]) return;
+  const ad = ads[idx];
+  adIndex = idx;
+  const content = document.getElementById('adContent');
+  if (!content) return;
+
+  let mediaHtml = '';
+  if (ad.media_url) {
+    if (ad.type === 'video') {
+      mediaHtml = `<video class="ad-media-video" src="${ad.media_url}" autoplay muted loop playsinline></video>`;
+    } else if (ad.type === 'image') {
+      mediaHtml = `<img class="ad-media-img" src="${ad.media_url}" alt="ad">`;
+    }
+  }
+
+  const ctaBtns = (ad.cta_buttons || []).map(b => {
+    const icons = { wa:'fa-whatsapp', ig:'fa-instagram', tt:'fa-tiktok', dc:'fa-discord', web:'fa-globe' };
+    const icon = icons[b.type] || 'fa-link';
+    return `<a class="ad-cta-btn ${b.type}" href="${b.url}" target="_blank" rel="noopener"><i class="fa-${b.type === 'web' ? 'solid' : 'brands'} ${icon}"></i>${b.label}</a>`;
+  }).join('');
+
+  content.innerHTML = `
+    ${mediaHtml}
+    <div class="ad-title">${ad.title || ''}</div>
+    <div class="ad-text">${ad.text || ''}</div>
+    <div class="ad-cta-row">${ctaBtns}</div>
+  `;
+
+  // nav row (prev/next) — hanya kalau lebih dari 1 iklan
+  const navRow = document.getElementById('adNavRow');
+  const dotsRow = document.getElementById('adDots');
+  if (ads.length > 1) {
+    navRow.innerHTML = `
+      <button class="ad-nav-btn" onclick="prevAd()">◀ Prev</button>
+      <span class="ad-counter">${idx + 1} / ${ads.length}</span>
+      <button class="ad-nav-btn" onclick="nextAd()">Next ▶</button>`;
+    dotsRow.innerHTML = ads.map((_, i) => `<div class="ad-dot ${i === idx ? 'active' : ''}" onclick="renderAd(${i})"></div>`).join('');
+  } else {
+    navRow.innerHTML = '';
+    dotsRow.innerHTML = '';
+  }
+}
+
+function prevAd() {
+  const iklanCfg = (typeof IKLAN_CFG !== 'undefined') ? IKLAN_CFG : null;
+  const ads = iklanCfg ? iklanCfg.ADS_LIST : (CFG.ADS || []);
+  adIndex = (adIndex - 1 + ads.length) % ads.length;
+  renderAd(adIndex);
+  if (adAutoTimer) { clearInterval(adAutoTimer); adAutoTimer = null; }
+}
+function nextAd() {
+  const iklanCfg = (typeof IKLAN_CFG !== 'undefined') ? IKLAN_CFG : null;
+  const ads = iklanCfg ? iklanCfg.ADS_LIST : (CFG.ADS || []);
+  adIndex = (adIndex + 1) % ads.length;
+  renderAd(adIndex);
+  if (adAutoTimer) { clearInterval(adAutoTimer); adAutoTimer = null; }
+}
+function closeAdOverlay() {
+  if (adAutoTimer) clearInterval(adAutoTimer);
+  const ov = document.getElementById('adOverlay');
+  if (!ov) return;
+  ov.style.opacity = '0';
+  ov.style.transition = 'opacity .3s ease, transform .3s ease';
+  ov.style.transform = 'translateY(40px)';
+  setTimeout(() => {
+    ov.classList.remove('show');
+    ov.style.opacity = '';
+    ov.style.transform = '';
+    ov.style.transition = '';
+  }, 320);
+  sessionStorage.setItem('hc_ad_seen', '1');
+}
+
+/* ================================================================
+   REDEEM CODE
+================================================================ */
+function openRedeem() {
+  const ov = document.getElementById('redeemOverlay');
+  if (!ov) return;
+  ov.classList.add('show');
+  document.getElementById('redeemInput').value = '';
+  document.getElementById('redeemMsg').textContent = '';
+  document.getElementById('redeemMsg').className = 'redeem-msg';
+  document.getElementById('redeemFiles').innerHTML = '';
+  setTimeout(() => document.getElementById('redeemInput').focus(), 200);
+}
+function closeRedeem() {
+  const ov = document.getElementById('redeemOverlay');
+  if (!ov) return;
+  ov.style.opacity = '0';
+  ov.style.transition = 'opacity .25s ease';
+  setTimeout(() => {
+    ov.classList.remove('show');
+    ov.style.opacity = '';
+    ov.style.transition = '';
+  }, 260);
+}
+
+function doRedeem() {
+  const input = document.getElementById('redeemInput');
+  const msgEl = document.getElementById('redeemMsg');
+  const filesEl = document.getElementById('redeemFiles');
+  const code = (input.value || '').trim().toUpperCase();
+
+  if (!code) {
+    msgEl.textContent = '⚠️ Masukkan kode dulu bro!';
+    msgEl.className = 'redeem-msg error';
+    return;
+  }
+
+  // Ambil daftar kode dari redemcode.js, hadiah dari backpackredem.js
+  const redeemCodes = (typeof REDEEM_CODES !== 'undefined') ? REDEEM_CODES : {};
+  const backpack   = (typeof BACKPACK    !== 'undefined') ? BACKPACK    : {};
+
+  const codeInfo = redeemCodes[code];
+  if (!codeInfo) {
+    msgEl.textContent = '❌ Kode salah atau tidak valid!';
+    msgEl.className = 'redeem-msg error';
+    filesEl.innerHTML = '';
+    input.style.animation = 'none';
+    input.style.borderColor = 'var(--accent2)';
+    setTimeout(() => { input.style.borderColor = ''; }, 1200);
+    return;
+  }
+
+  // Cek apakah kode aktif
+  if (!codeInfo.active) {
+    msgEl.textContent = '⏸️ Kode ini sudah tidak aktif / expired!';
+    msgEl.className = 'redeem-msg error';
+    filesEl.innerHTML = '';
+    return;
+  }
+
+  // Cek expired (kalau ada)
+  if (codeInfo.expires) {
+    const now = new Date();
+    const exp = new Date(codeInfo.expires + 'T23:59:59');
+    if (now > exp) {
+      msgEl.textContent = '⏰ Kode sudah expired pada ' + codeInfo.expires + '!';
+      msgEl.className = 'redeem-msg error';
+      filesEl.innerHTML = '';
+      return;
+    }
+  }
+
+  // Ambil hadiah dari backpackredem.js
+  const pack = backpack[code];
+  if (!pack) {
+    msgEl.textContent = '✅ Kode valid! Tapi hadiah belum dikonfigurasi. Hubungi admin di Discord!';
+    msgEl.className = 'redeem-msg success';
+    filesEl.innerHTML = '';
+    return;
+  }
+
+  msgEl.textContent = `✅ Berhasil! ${pack.label} — ${pack.files.length} file(s) unlocked!`;
+  msgEl.className = 'redeem-msg success';
+
+  filesEl.innerHTML = pack.files.map((f, i) => {
+    const safeContent = f.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `
+      <div class="redeem-file-card" style="animation-delay:${i * 0.1}s">
+        <div class="rfc-name">📄 ${f.name}</div>
+        <div class="rfc-desc">${f.desc}</div>
+        <div class="rfc-content" id="rfc_content_${i}">${safeContent}</div>
+        <div class="rfc-actions">
+          <button class="rfc-copy-btn" onclick="rfcCopy(${i}, '${encodeURIComponent(f.content)}')">📋 Salin Teks</button>
+          <button class="rfc-dl-btn" onclick="rfcDownload('${encodeURIComponent(f.filename)}','${encodeURIComponent(f.content)}')">⬇ Download</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  showToast(`🎁 ${pack.files.length} file berhasil di-unlock!`);
+}
+
+function rfcCopy(idx, encodedContent) {
+  const content = decodeURIComponent(encodedContent);
+  navigator.clipboard.writeText(content).then(() => {
+    showToast('✅ Teks berhasil disalin!');
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = content;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    showToast('✅ Teks berhasil disalin!');
+  });
+}
+
+function rfcDownload(encodedFilename, encodedContent) {
+  const filename = decodeURIComponent(encodedFilename);
+  const content = decodeURIComponent(encodedContent);
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast(`⬇ File "${filename}" didownload!`);
 }
 
 function applyConfig() {
@@ -1061,6 +1340,19 @@ let currentChatTitle = null;
 let currentScripts = [];
 let activeScriptIdx = 0;
 
+/* ── OVERCHAT SESSION ── */
+function _loadOverchatSession() {
+  try {
+    const raw = localStorage.getItem('hc_overchat_session');
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { chatId: crypto.randomUUID(), deviceId: crypto.randomUUID() };
+}
+function _saveOverchatSession(s) {
+  try { localStorage.setItem('hc_overchat_session', JSON.stringify(s)); } catch {}
+}
+let _overchatSession = _loadOverchatSession();
+
 function getChatSessions() { try { return JSON.parse(localStorage.getItem('hc_sessions')||'[]'); } catch { return []; } }
 function setChatSessions(a) { localStorage.setItem('hc_sessions', JSON.stringify(a)); }
 
@@ -1220,16 +1512,7 @@ function downloadCode() {
 ================================================================ */
 let codePanelOpen = true;
 function toggleCodePanel() {
-  const rightPanel = document.querySelector('.right-panel');
-  const leftPanel = document.querySelector('.left-panel');
-  const btn = document.getElementById('togglePanelBtn');
-  codePanelOpen = !codePanelOpen;
-  // Sembunyikan hanya code panel (right), chat + input tetap keliatan
-  rightPanel.style.display = codePanelOpen ? 'flex' : 'none';
-  // Kalau right panel hilang, left panel expand full
-  leftPanel.style.flex = codePanelOpen ? '0 0 58%' : '1';
-  btn.textContent = codePanelOpen ? '▾' : '▴';
-  btn.title = codePanelOpen ? 'Tutup panel kode' : 'Buka panel kode';
+  // Code panel removed — chat is now full width
 }
 
 /* ================================================================
@@ -1318,10 +1601,10 @@ function addMsg(role, html) {
       setTimeout(() => { copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Salin'; copyBtn.classList.remove('copied'); }, 2000);
     });
   };
-  // Add HANAMORI CALYX verified name badge for AI messages
+  // Add HANAMORI CALYX verified name badge for AI messages, user label for user
   const aiNamePrefix = role === 'ai'
     ? `<div class="ai-name-badge">HANAMORI CALYX ${VERIFIED_BADGE_SVG}</div>`
-    : '';
+    : `<div class="ai-name-badge">ANDA [✨]</div>`;
   bubble.innerHTML = aiNamePrefix + html + `<span class="msg-time">${getTime()}</span>`;
   bubble.appendChild(copyBtn);
   if (role === 'user') { wrap.appendChild(bubble); wrap.appendChild(av); }
@@ -1365,6 +1648,64 @@ function addTyping(prompt) {
 function removeTyping() {
   if (thinkLabelInterval) { clearInterval(thinkLabelInterval); thinkLabelInterval = null; }
   const e = document.getElementById('typingMsg'); if (e) e.remove();
+}
+
+/* ══ COMING SOON ══ */
+function showComingSoon(fitur) {
+  showToast('🚀 Fitur ' + fitur + ' — Coming Soon!');
+}
+function showComingSoonOverlay(fitur) {
+  let ov = document.getElementById('comingSoonOverlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'comingSoonOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;transition:opacity .3s ease';
+    ov.innerHTML = `
+      <div id="csSoonBox" style="
+        background:linear-gradient(135deg,rgba(20,20,35,.98),rgba(30,15,45,.98));
+        border:1px solid rgba(124,58,237,.5);border-radius:20px;
+        padding:36px 28px 28px;max-width:320px;width:88%;
+        text-align:center;
+        box-shadow:0 0 40px rgba(124,58,237,.3),0 20px 60px rgba(0,0,0,.5);
+        position:relative;transform:scale(.9) translateY(20px);
+        transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+      ">
+        <div style="font-size:3rem;margin-bottom:12px;filter:drop-shadow(0 0 16px rgba(124,58,237,.8))">🚀</div>
+        <div style="font-family:'Orbitron',monospace;font-size:1rem;font-weight:700;color:#a78bfa;letter-spacing:2px;margin-bottom:6px">COMING SOON</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:.65rem;color:rgba(0,212,255,.8);letter-spacing:3px;margin-bottom:16px">◈ SEGERA HADIR ◈</div>
+        <div id="csSoonFitur" style="font-size:.9rem;font-weight:600;color:#fff;margin-bottom:10px"></div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:20px">
+          Fitur ini masih dalam pengembangan.<br>Tunggu update berikutnya ya bro! 😊
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;flex-wrap:wrap">
+          <span style="background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:20px;padding:4px 12px;font-size:.6rem;color:#a78bfa">🔨 Dev lagi kerja</span>
+          <span style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:20px;padding:4px 12px;font-size:.6rem;color:#00d4ff">⚡ Segera Hadir</span>
+        </div>
+        <button onclick="closeComingSoonOverlay()" style="
+          width:100%;padding:11px;
+          background:linear-gradient(135deg,#7c3aed,#a78bfa);
+          border:none;border-radius:12px;color:#fff;
+          font-family:'Share Tech Mono',monospace;
+          font-size:.75rem;font-weight:700;letter-spacing:1px;cursor:pointer;
+        ">OKE, NUNGGU DULU! 👍</button>
+      </div>`;
+    ov.addEventListener('click', e => { if (e.target === ov) closeComingSoonOverlay(); });
+    document.body.appendChild(ov);
+  }
+  document.getElementById('csSoonFitur').textContent = '📎 Fitur ' + fitur;
+  requestAnimationFrame(() => {
+    ov.style.opacity = '1';
+    const box = document.getElementById('csSoonBox');
+    if (box) box.style.transform = 'scale(1) translateY(0)';
+  });
+}
+function closeComingSoonOverlay() {
+  const ov = document.getElementById('comingSoonOverlay');
+  if (!ov) return;
+  ov.style.opacity = '0';
+  const box = document.getElementById('csSoonBox');
+  if (box) box.style.transform = 'scale(.9) translateY(20px)';
+  setTimeout(() => { if (ov) ov.remove(); }, 300);
 }
 
 /* ══ ATTACH ══ */
@@ -1416,9 +1757,9 @@ async function sendMessage() {
   else addMsg('user', esc(prompt));
   let userContent = [];
   let fileContext = '';
+
   if (pendingAttach) {
     if (pendingAttach.type === 'image' && pendingAttach.dataUrl) {
-      // Kirim gambar sebagai base64 ke model vision
       const base64 = pendingAttach.dataUrl.split(',')[1];
       const mimeMatch = pendingAttach.dataUrl.match(/data:([^;]+);/);
       const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
@@ -1437,29 +1778,99 @@ async function sendMessage() {
   if (chatHistory.length > 30) chatHistory = chatHistory.slice(chatHistory.length - 30);
   addTyping(prompt);
   try {
-    const hasImage = userContent.some(x => x.type === 'image_url');
-    const chosenTemp = 0.5;
-    // Selalu pakai proxy Vercel — device UUID aman di server, tidak perlu API key di frontend
-    const res = await fetch('/api/chat', {
+    let reply = '';
+
+    /* ══ OVERCHAT API ══ */
+    const allMessages = [
+      { id: crypto.randomUUID(), role: 'system', content: SYSTEM },
+      ...chatHistory.map(m => ({
+        id: crypto.randomUUID(),
+        role: m.role,
+        content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
+      }))
+    ];
+
+    const overchatBody = {
+      chatId: _overchatSession.chatId,
+      model: 'claude-haiku-4-5-20251001',
+      messages: allMessages,
+      personaId: 'claude-haiku-4-5-landing',
+      frequency_penalty: 0,
+      max_tokens: 4000,
+      presence_penalty: 0,
+      stream: true,
+      temperature: 0.5,
+      top_p: 0.95,
+    };
+
+    const overchatHeaders = {
+      'sec-ch-ua-platform': '"Android"',
+      'x-device-uuid': _overchatSession.deviceId,
+      'sec-ch-ua': '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
+      'sec-ch-ua-mobile': '?1',
+      'x-device-language': 'id-ID',
+      'x-device-platform': 'web',
+      'x-device-version': '1.0.44',
+      'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Mobile Safari/537.36',
+      'accept': '*/*',
+      'content-type': 'application/json',
+      'origin': 'https://overchat.ai',
+      'referer': 'https://overchat.ai/',
+      'accept-language': 'id-ID,id;q=0.9',
+      'priority': 'u=1, i',
+    };
+
+    const res = await fetch('https://api.overchat.ai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        temperature: chosenTemp,
-        messages: [{ role: 'system', content: SYSTEM }, ...chatHistory]
-      })
+      headers: overchatHeaders,
+      body: JSON.stringify(overchatBody),
     });
-    const data = await res.json();
-    removeTyping();
+
     if (!res.ok) {
-      const errMsg = data?.error?.message || 'Pastikan API Key benar.';
-      addMsg('ai', `❌ Error: ${esc(errMsg)}`);
+      removeTyping();
+      addMsg('ai', `❌ Error: HTTP ${res.status}`);
       chatHistory.pop();
       isLoading = false;
       document.getElementById('sendBtn').disabled = false;
       document.getElementById('drawerStatus').textContent = 'AI Online & Siap';
       return;
     }
-    let reply = data.choices?.[0]?.message?.content || '_(Tidak ada respons)_';
+
+    // Baca SSE stream
+    removeTyping();
+    addMsg('ai', '');
+    const streamEl = document.querySelector('#chatMessages .message.ai:last-child .bubble');
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line.startsWith('data:')) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === '[DONE]') continue;
+        try {
+          const json = JSON.parse(data);
+          const chunk = json.choices?.[0]?.delta?.content;
+          if (typeof chunk === 'string') {
+            reply += chunk;
+            if (streamEl) {
+              streamEl.innerHTML = `<div class="ai-name-badge">HANAMORI CALYX ${VERIFIED_BADGE_SVG}</div>` + renderMarkdown(reply);
+            }
+            const cm = document.getElementById('chatMessages');
+            cm.scrollTop = cm.scrollHeight;
+          }
+        } catch {}
+      }
+    }
+
     chatHistory.push({ role: 'assistant', content: reply });
     /* ══ DETECT MULTI-SCRIPT ══ */
     const multiPattern = /\[SCRIPT\s*\d+:\s*([^\]]+)\]\s*```(\w+)\n?([\s\S]*?)```/gi;
@@ -1480,10 +1891,8 @@ async function sendMessage() {
       currentCode = first.code; currentLang = first.lang;
       document.getElementById('filename').textContent = first.name;
       document.getElementById('langLabel').textContent = first.label;
-      renderCodeSafe(first.code, first.lang);
-      ['copyBtn','saveBtn','dlBtn'].forEach(id => document.getElementById(id).style.display = 'flex');
-      document.getElementById('prevBtn').style.display = (first.lang === 'html') ? 'flex' : 'none';
-      renderScriptTabs();
+      const fp = document.getElementById('floatPrevBtn');
+      if (fp) fp.style.display = currentScripts.some(s => s.lang === 'html') ? 'inline-flex' : 'none';
       showToast('📦 ' + currentScripts.length + ' script siap!');
     } else {
       /* ══ SINGLE SCRIPT ══ */
@@ -1511,18 +1920,34 @@ async function sendMessage() {
         activeScriptIdx = 0;
         document.getElementById('filename').textContent = fname;
         document.getElementById('langLabel').textContent = matched.label;
-        renderCodeSafe(matched.code, matched.lang);
-        ['copyBtn','saveBtn','dlBtn'].forEach(id => document.getElementById(id).style.display = 'flex');
-        document.getElementById('prevBtn').style.display = (matched.lang === 'html') ? 'flex' : 'none';
-        renderScriptTabs();
+        const fp = document.getElementById('floatPrevBtn');
+        if (fp) fp.style.display = (matched.lang === 'html') ? 'inline-flex' : 'none';
         showToast('✅ Script ' + matched.label + ' siap!');
       } else {
         currentScripts = [];
-        document.getElementById('fileBtnBar').style.display = 'none';
-        renderScriptTabs();
+        const fp = document.getElementById('floatPrevBtn');
+        if (fp) fp.style.display = 'none';
       }
     }
-    addMsg('ai', renderMarkdown(reply));
+    // Update streaming bubble dengan final rendered content
+    if (streamEl) {
+      streamEl.innerHTML = `<div class="ai-name-badge">HANAMORI CALYX ${VERIFIED_BADGE_SVG}</div>` + renderMarkdown(reply) + `<span class="msg-time">${getTime()}</span>`;
+      // Re-attach copy button
+      const tempDiv2 = document.createElement('div');
+      tempDiv2.innerHTML = reply;
+      const plainText2 = tempDiv2.innerText || tempDiv2.textContent || '';
+      const copyBtn2 = document.createElement('button');
+      copyBtn2.className = 'msg-copy-btn';
+      copyBtn2.innerHTML = '<i class="fa-regular fa-copy"></i> Salin';
+      copyBtn2.onclick = () => {
+        navigator.clipboard.writeText(plainText2.trim()).then(() => {
+          copyBtn2.innerHTML = '<i class="fa-solid fa-check"></i> Tersalin!';
+          copyBtn2.classList.add('copied');
+          setTimeout(() => { copyBtn2.innerHTML = '<i class="fa-regular fa-copy"></i> Salin'; copyBtn2.classList.remove('copied'); }, 2000);
+        });
+      };
+      streamEl.appendChild(copyBtn2);
+    }
     saveCurrentChat(prompt.slice(0, 40));
   } catch(err) {
     removeTyping();
@@ -1560,15 +1985,67 @@ function renderMarkdown(text) {
   inlineCodes.forEach((c, i) => {
     text = text.replace(`%%IC${i}%%`, `<code style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:4px;padding:1px 5px;font-family:'Share Tech Mono',monospace;font-size:.76rem;color:var(--accent)">${esc(c)}</code>`);
   });
-  codeBlocks.forEach((_, i) => {
-    text = text.replace(`%%CB${i}%%`, `<div style="margin:6px 0;padding:7px 12px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:8px;font-family:'Share Tech Mono',monospace;font-size:.68rem;color:var(--accent);cursor:pointer;display:flex;align-items:center;gap:7px" onclick="copyCode()" title="Klik untuk salin kode"><span>📋</span><span>Kode tersedia di panel bawah — ketuk untuk salin</span><span style="margin-left:auto;opacity:.6">→</span></div>`);
+  codeBlocks.forEach((cb, i) => {
+    const langLabel = cb.lang ? cb.lang.toUpperCase() : 'CODE';
+    const escapedCode = esc(cb.code);
+    const isPreviewable = cb.lang === 'html';
+    const previewBtn = isPreviewable
+      ? `<button onclick="openPreviewFromCode(this)" data-code="${encodeURIComponent(cb.code)}" style="padding:3px 9px;border-radius:5px;font-size:.58rem;font-family:'Share Tech Mono',monospace;border:1px solid rgba(16,185,129,.4);background:rgba(16,185,129,.08);color:#10b981;cursor:pointer;transition:all .2s" title="Preview HTML">🌐 Preview</button>`
+      : '';
+    const blockId = 'cb_' + Date.now() + '_' + i;
+    text = text.replace(`%%CB${i}%%`, `<div class="inline-code-block" id="${blockId}">
+      <div class="icb-header">
+        <span class="icb-lang">${langLabel}</span>
+        <div class="icb-actions">
+          ${previewBtn}
+          <button class="icb-copy-btn" onclick="copyInlineCode(this,'${blockId}')" title="Salin kode">📋 Salin</button>
+          ${isPreviewable ? `<button onclick="saveInlineCode(this,'${blockId}')" title="Simpan script" style="padding:3px 9px;border-radius:5px;font-size:.58rem;font-family:'Share Tech Mono',monospace;border:1px solid rgba(0,212,255,.3);background:rgba(0,212,255,.06);color:var(--accent);cursor:pointer">💾 Simpan</button>` : `<button onclick="saveInlineCode(this,'${blockId}')" title="Simpan script" style="padding:3px 9px;border-radius:5px;font-size:.58rem;font-family:'Share Tech Mono',monospace;border:1px solid rgba(0,212,255,.3);background:rgba(0,212,255,.06);color:var(--accent);cursor:pointer">💾 Simpan</button>`}
+        </div>
+      </div>
+      <div class="icb-code" data-raw="${encodeURIComponent(cb.code)}" data-lang="${cb.lang}">${hlCode(escapedCode, cb.lang)}</div>
+    </div>`);
   });
   return text;
 }
 
 /* ================================================================
-   CODE RENDER
+   INLINE CODE HELPERS
 ================================================================ */
+function copyInlineCode(btn, blockId) {
+  const block = document.getElementById(blockId);
+  if (!block) return;
+  const raw = decodeURIComponent(block.querySelector('.icb-code').dataset.raw || '');
+  navigator.clipboard.writeText(raw).then(() => {
+    btn.textContent = '✅ Tersalin!';
+    btn.style.borderColor = 'var(--success)';
+    btn.style.color = 'var(--success)';
+    setTimeout(() => { btn.textContent = '📋 Salin'; btn.style.borderColor = 'rgba(0,212,255,.3)'; btn.style.color = 'var(--accent)'; }, 2000);
+  });
+}
+function saveInlineCode(btn, blockId) {
+  const block = document.getElementById(blockId);
+  if (!block) return;
+  const codeEl = block.querySelector('.icb-code');
+  const raw = decodeURIComponent(codeEl.dataset.raw || '');
+  const lang = codeEl.dataset.lang || 'txt';
+  const ext = lang === 'lua' ? 'lua' : lang === 'html' ? 'html' : lang === 'css' ? 'css' : lang === 'js' ? 'js' : 'txt';
+  const name = prompt('Nama script:', 'script_hanamori.' + ext);
+  if (!name) return;
+  const scripts = getSavedScripts();
+  scripts.unshift({ id: Date.now()+'', name, code: raw, lang, date: getDateTime() });
+  setSavedScripts(scripts.slice(0, 50));
+  renderSave();
+  btn.textContent = '✅ Tersimpan!';
+  setTimeout(() => { btn.textContent = '💾 Simpan'; }, 2000);
+  showToast('💾 Script "' + name + '" tersimpan!');
+}
+function openPreviewFromCode(btn) {
+  const raw = decodeURIComponent(btn.dataset.code || '');
+  currentCode = raw; currentLang = 'html';
+  openPreview();
+}
+
+
 function renderCodeSafe(code, lang) {
   const w = document.getElementById('codeWrapper');
   const lines = code.split('\n');
@@ -1603,8 +2080,8 @@ function hlHtml(code) {
   return code.split('\n').map(line=>{
     if(line.trimStart().startsWith('<!--')) return `<span class="tk-cm">${esc(line)}</span>`;
     let h=esc(line);
-    h=h.replace(/(&lt;\/)([\w-]+)(&gt;)/g,(_,a,tag,c)=>`<span class="tk-tg">${a}<span style="color:#f87171">${tag}</span>${c}</span>`);
-    h=h.replace(/(&lt;)([\w-]+)((?:\s[\s\S]*?)?)(\/?&gt;)/g,(_,open,tag,attrs,close)=>{const attrHl=attrs.replace(/([\w-]+)(=)(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g,(_,a,eq,v)=>`<span class="tk-at">${a}</span>${eq}<span class="tk-vl">${v}</span>`);return `${open}<span class="tk-tg">${tag}</span>${attrHl}${close}`;});
+    h=h.replace(/(&lt;\/)([\\w-]+)(&gt;)/g,(_,a,tag,c)=>`<span class="tk-tg">${a}<span style="color:#f87171">${tag}</span>${c}</span>`);
+    h=h.replace(/(&lt;)([\w-]+)((?:\s[\s\S]*?)?)(\/?>)/g,(_,open,tag,attrs,close)=>{const attrHl=attrs.replace(/([\w-]+)(=)(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g,(_,a,eq,v)=>`<span class="tk-at">${a}</span>${eq}<span class="tk-vl">${v}</span>`);return `${open}<span class="tk-tg">${tag}</span>${attrHl}${close}`;});
     return h;
   }).join('\n');
 }
@@ -1631,11 +2108,15 @@ function hlCss(code) {
   }).join('\n');
 }
 function hlGeneric(code) {
-  return code.split('\n').map(line=>{
-    if(/^\s*(\/\/|#|--|\/\*)/.test(line)) return `<span class="tk-cm">${esc(line)}</span>`;
-    let h=esc(line);
-    h=h.replace(/(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g,m=>`<span class="tk-st">${m}</span>`);
-    h=h.replace(/\b(\d+\.?\d*)\b/g,'<span class="tk-nm">$1</span>');
+  const KW = ['function','return','if','else','for','while','do','break','continue','var','let','const','class','import','export','true','false','null','undefined','new','this','try','catch','finally','throw','switch','case','default','in','of','typeof','instanceof','void','delete','async','await','yield','static','super','extends','from'];
+  return code.split('\n').map(line => {
+    if (line.trimStart().startsWith('//') || line.trimStart().startsWith('#')) return `<span class="tk-cm">${esc(line)}</span>`;
+    let h = esc(line);
+    h = h.replace(/(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g, m => `<span class="tk-st">${m}</span>`);
+    h = h.replace(/\b(\d+\.?\d*)\b/g, '<span class="tk-nm">$1</span>');
+    h = h.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/g, (m, fn) => KW.includes(fn) ? m : `<span class="tk-fn">${fn}</span>(`);
+    KW.forEach(k => { h = h.replace(new RegExp(`\\b(${k})\\b`, 'g'), '<span class="tk-kw">$1</span>'); });
     return h;
   }).join('\n');
 }
+  
