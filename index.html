@@ -1,70 +1,168 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>MENTAHAN STUDIO — GFX & Anime Edit</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Percakapan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<header class="topbar">
-  <div class="logo"><i class="fa-solid fa-clapperboard"></i> MENTAHAN<span>STUDIO</span></div>
-  <div class="topbar-sub">◈ Mentahan Video • Bahan GFX • Background — Siap Edit ◈</div>
-</header>
+    <div class="phone" id="phone">
 
-<nav class="tabs">
-  <button class="tab-btn active" data-tab="video" onclick="switchTab('video',this)"><i class="fa-solid fa-video"></i> Mentahan Video</button>
-  <button class="tab-btn" data-tab="gfx" onclick="switchTab('gfx',this)"><i class="fa-solid fa-layer-group"></i> Bahan GFX</button>
-  <button class="tab-btn" data-tab="bg" onclick="switchTab('bg',this)"><i class="fa-solid fa-mountain-sun"></i> Background GFX</button>
-</nav>
+        <!-- BANNED OVERLAY -->
+        <div class="banned-overlay" id="banned-overlay">
+            <div class="ban-icon" id="ban-icon-slot"></div>
+            <div class="ban-title">Akun Diblokir</div>
+            <div class="ban-reason" id="ban-reason-text">Anda telah diblokir oleh Owner karena melanggar kebijakan.</div>
+            <div class="ban-sub">Hubungi Owner untuk pembukaan blokir</div>
+            <button class="primary-btn" id="request-unban-btn">Ajukan Buka Blokir</button>
+            <button class="btn-ghost" id="ban-logout-btn" style="color:rgba(255,255,255,0.5);margin-top:12px;">Logout</button>
+        </div>
 
-<main>
-  <section id="tab-video" class="tab-panel active">
-    <div class="search-row">
-      <i class="fa-solid fa-magnifying-glass"></i>
-      <input type="text" id="searchVideo" placeholder="Cari mentahan video..." oninput="renderVideos()">
+        <!-- LOGIN SCREEN -->
+        <div class="login-screen" id="login-screen">
+            <div class="login-box">
+                <h1>Chat App</h1>
+                <div class="sub">Masuk atau daftar akun</div>
+                <div class="login-tabs">
+                    <div class="login-tab active" data-tab="login">Masuk</div>
+                    <div class="login-tab" data-tab="register">Daftar</div>
+                </div>
+                <div id="login-error" class="login-error"></div>
+                <div id="login-fields">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input id="login-username" placeholder="Masukkan username" />
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input id="login-password" type="password" placeholder="Masukkan password" />
+                    </div>
+                </div>
+                <div id="register-fields" style="display:none;">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input id="register-username" placeholder="Pilih username" />
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input id="register-password" type="password" placeholder="Buat password" />
+                    </div>
+                    <div class="form-group">
+                        <label>Nomor HP</label>
+                        <input id="register-phone" placeholder="Masukkan nomor HP" />
+                    </div>
+                    <div class="form-group">
+                        <label>Session ID</label>
+                        <input id="register-session" placeholder="Session ID (opsional)" />
+                    </div>
+                </div>
+                <button class="primary-btn" id="login-btn">Masuk</button>
+            </div>
+        </div>
+
+        <div class="header">
+            <div class="header-title" id="header-title">Percakapan</div>
+            <div class="header-icons">
+                <div class="icon-btn" id="camera-btn"></div>
+                <div class="icon-btn" id="menu-btn"></div>
+            </div>
+        </div>
+
+        <div class="content scrollbar-thin" id="main-content"></div>
+
+        <div class="speed-dial" id="speed-dial"></div>
+        <button class="fab" id="fab"></button>
+
+        <div class="bottom-nav" id="bottom-nav">
+            <div class="nav-item active" data-tab="chats">
+                <div class="nav-icon"></div>
+                <span>Chat</span>
+            </div>
+            <div class="nav-item" data-tab="status">
+                <div class="nav-icon"></div>
+                <span>Status</span>
+            </div>
+            <div class="nav-item" data-tab="komunitas">
+                <div class="nav-icon"></div>
+                <span>Komunitas</span>
+            </div>
+            <div class="nav-item" data-tab="pengaturan">
+                <div class="nav-icon"></div>
+                <span>Pengaturan</span>
+            </div>
+        </div>
+
+        <div class="screen" id="chat-screen">
+            <div class="chat-header">
+                <div class="icon-btn" id="chat-back"></div>
+                <div class="chat-header-info" id="chat-header-info">
+                    <div id="chat-avatar-wrap"></div>
+                    <div style="min-width:0;flex:1;">
+                        <div class="chat-header-name" id="chat-name"></div>
+                        <div class="chat-header-status" id="chat-status"></div>
+                    </div>
+                </div>
+                <div class="chat-header-actions" id="chat-header-actions"></div>
+            </div>
+            <div class="content scrollbar-thin" id="messages" style="flex:1;"></div>
+            <div class="help-quickbtn" id="help-quickbar" style="display:none;">
+                <button class="primary-btn" id="quick-verify-btn">Ajukan Centang Biru untuk Akun Saya</button>
+            </div>
+            <div class="composer">
+                <div class="icon-btn" id="emoji-btn"></div>
+                <div class="icon-btn" id="clip-btn"></div>
+                <input id="draft-input" placeholder="Ketik pesan" autocomplete="off" />
+                <button id="send-btn"></button>
+                <div class="icon-btn" id="mic-icon"></div>
+            </div>
+        </div>
+
+        <div class="screen" id="info-screen">
+            <div class="chat-header">
+                <div class="icon-btn" id="info-back"></div>
+                <div class="chat-header-name" style="flex:1;">Info</div>
+            </div>
+            <div class="content scrollbar-thin" id="info-content"></div>
+        </div>
+
+        <div class="screen" id="owner-screen">
+            <div class="chat-header">
+                <div class="icon-btn" id="owner-back"></div>
+                <div class="chat-header-name" style="flex:1;">Panel Owner</div>
+                <span class="owner-crown-badge" id="owner-panel-badge">OWNER</span>
+            </div>
+            <div class="content scrollbar-thin" id="owner-content"></div>
+        </div>
+
+        <div class="story-screen" id="story-screen">
+            <div class="story-progress" id="story-progress"></div>
+            <div class="story-top">
+                <div id="story-avatar-wrap"></div>
+                <div>
+                    <div class="story-top-name" id="story-name"></div>
+                    <div class="story-top-time" id="story-time"></div>
+                </div>
+                <div class="story-close" id="story-close"></div>
+            </div>
+            <div class="story-body" id="story-body"></div>
+            <div id="story-controls" style="position:absolute;inset:0;pointer-events:none;"></div>
+            <div class="story-nav" id="story-prev" style="left:0;"></div>
+            <div class="story-nav" id="story-next" style="right:0;"></div>
+        </div>
+
+        <div class="modal-backdrop" id="modal-backdrop">
+            <div class="modal-sheet" id="modal-sheet"></div>
+        </div>
+
     </div>
-    <div class="grid" id="videoGrid"></div>
-  </section>
 
-  <section id="tab-gfx" class="tab-panel">
-    <div class="search-row">
-      <i class="fa-solid fa-magnifying-glass"></i>
-      <input type="text" id="searchGfx" placeholder="Cari bahan GFX..." oninput="renderGfx()">
-    </div>
-    <div class="grid" id="gfxGrid"></div>
-  </section>
-
-  <section id="tab-bg" class="tab-panel">
-    <div class="search-row">
-      <i class="fa-solid fa-magnifying-glass"></i>
-      <input type="text" id="searchBg" placeholder="Cari background GFX..." oninput="renderBg()">
-    </div>
-    <div class="grid" id="bgGrid"></div>
-  </section>
-</main>
-
-<div class="lightbox" id="imgLightbox" onclick="closeLightbox(event)">
-  <div class="lightbox-box" onclick="event.stopPropagation()">
-    <img id="lightboxImg" src="" alt="">
-    <div class="lightbox-title" id="lightboxTitle"></div>
-    <div class="lightbox-actions">
-      <button class="btn-download" id="lightboxDownloadBtn"><i class="fa-solid fa-download"></i> Download</button>
-      <button class="btn-close" onclick="closeLightbox(event)"><i class="fa-solid fa-xmark"></i> Tutup</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast" class="toast"></div>
-
-<footer class="site-footer">© <span id="yearNow"></span> MENTAHAN STUDIO — Semua bahan untuk keperluan edit.</footer>
-
-<script src="product.js"></script>
-<script src="bahangfx.js"></script>
-<script src="backgroundgfx.js"></script>
-<script src="main.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
