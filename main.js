@@ -115,10 +115,17 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                if (!res.ok) return false;
+                if (!res.ok) {
+                    showDebugBanner("❌ /api/verify-owner status " + res.status + " " + res.statusText + " (folder api/ mungkin belum kebaca Vercel)");
+                    return false;
+                }
                 const data = await res.json();
+                if (data.error) showDebugBanner("⚠️ verify-owner: " + data.error);
                 return !!data.ok;
-            } catch (e) { console.error("verifyOwnerOnServer:", e); return false; }
+            } catch (e) {
+                showDebugBanner("❌ Gagal hubungi /api/verify-owner: " + (e && e.message ? e.message : e));
+                return false;
+            }
         }
 
         function listenUsers() {
@@ -2967,19 +2974,44 @@
             });
 
         /* ================= INIT ================= */
+        function showDebugBanner(msg) {
+            let el = document.getElementById('debug-banner');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'debug-banner';
+                el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#C9553B;color:#fff;' +
+                    'padding:10px 14px;font-size:12px;font-family:monospace;line-height:1.5;white-space:pre-wrap;' +
+                    'word-break:break-word;max-height:40vh;overflow-y:auto;';
+                document.body.prepend(el);
+            }
+            el.textContent = msg;
+        }
+
         async function boot() {
             hasCloud = await (window.firebaseReadyPromise || Promise.resolve(false));
+            if (window.firebaseInitError) {
+                showDebugBanner("❌ " + window.firebaseInitError);
+            }
             if (hasCloud) {
                 await ensureOwnerAccount();
                 try {
                     const snap = await usersCol().get();
                     USERS = snap.docs.map(d => d.data());
-                } catch (e) { console.error("Gagal ambil data users awal:", e); }
+                    if (USERS.length === 0) console.warn("USERS kosong, tapi tidak error -- kemungkinan Firestore memang baru.");
+                } catch (e) {
+                    const msg = "❌ Gagal ambil data dari Firestore: " + (e && e.message ? e.message : e) +
+                        (e && e.code ? " (code: " + e.code + ")" : "");
+                    console.error(msg, e);
+                    showDebugBanner(msg);
+                }
                 listenUsers();
                 listenBanRequests();
                 await ensureSeedChannels();
             } else {
-                console.error("Firebase belum tersambung. Cek /api/config & Environment Variables di Vercel (lihat tutorial).");
+                const msg = "❌ Firebase gagal tersambung (hasCloud = false). " +
+                    (window.firebaseInitError || "Cek firebase-config.js & Environment Variables.");
+                console.error(msg);
+                showDebugBanner(msg);
             }
 
             if (loadSession()) {
