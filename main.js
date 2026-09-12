@@ -356,7 +356,7 @@
                 });
             }
             saveData();
-            alert("Permintaan buka blokir telah dikirim ke Owner.");
+            customAlert("Permintaan buka blokir telah dikirim ke Owner.");
         }
 
         /* ================= DATA ================= */
@@ -444,7 +444,7 @@
                 if (e && (e.code === "resource-exhausted" || /size|large/i.test(e.message || ""))) {
                     if (!window.__quotaWarned) {
                         window.__quotaWarned = true;
-                        alert("Data terlalu besar untuk disimpan (biasanya karena foto/video). Coba pakai foto/video yang lebih kecil.");
+                        customAlert("Data terlalu besar untuk disimpan (biasanya karena foto/video). Coba pakai foto/video yang lebih kecil.");
                         setTimeout(() => { window.__quotaWarned = false; }, 4000);
                     }
                 } else console.error("savePrivateData:", e);
@@ -896,7 +896,7 @@
                 if (!file) { document.body.removeChild(inp); return; }
                 const isVideo = file.type.startsWith("video");
                 if (isVideo && file.size > MAX_VIDEO_BYTES) {
-                    alert("Video terlalu besar (maks ~9MB). Ini adalah batas penyimpanan lokal di browser -- pakai video yang lebih pendek/kecil ya.");
+                    customAlert("Video terlalu besar (maks ~9MB). Ini adalah batas penyimpanan lokal di browser -- pakai video yang lebih pendek/kecil ya.");
                     document.body.removeChild(inp);
                     return;
                 }
@@ -1115,11 +1115,13 @@
         function unfollowChannel(chatId) {
             const c = CHATS.find(x => x.id === chatId);
             if (!c) return;
-            if (!confirm(`Berhenti mengikuti "${c.name}"? Anda bisa menemukannya lagi lewat Jelajahi.`)) return;
-            if (!hasCloud || !loggedInUser) return;
-            channelsCol().doc(String(chatId)).update({
-                followers: firebase.firestore.FieldValue.arrayRemove(loggedInUser.username)
-            }).catch(e => console.error("unfollowChannel:", e));
+            customConfirm(`Berhenti mengikuti "${c.name}"? Anda bisa menemukannya lagi lewat Jelajahi.`).then(ok => {
+                if (!ok) return;
+                if (!hasCloud || !loggedInUser) return;
+                channelsCol().doc(String(chatId)).update({
+                    followers: firebase.firestore.FieldValue.arrayRemove(loggedInUser.username)
+                }).catch(e => console.error("unfollowChannel:", e));
+            });
         }
 
         function openExploreChannels() {
@@ -1364,19 +1366,19 @@
                     const confirm = document.getElementById("confirm-password").value.trim();
 
                     if (!old || !newPass || !confirm) {
-                        alert("Semua field harus diisi!");
+                        customAlert("Semua field harus diisi!");
                         return;
                     }
                     if (old !== loggedInUser.password) {
-                        alert("Password lama salah!");
+                        customAlert("Password lama salah!");
                         return;
                     }
                     if (newPass !== confirm) {
-                        alert("Password baru dan konfirmasi tidak sama!");
+                        customAlert("Password baru dan konfirmasi tidak sama!");
                         return;
                     }
                     if (newPass.length < 4) {
-                        alert("Password minimal 4 karakter!");
+                        customAlert("Password minimal 4 karakter!");
                         return;
                     }
 
@@ -1386,7 +1388,7 @@
                         loggedInUser.password = newPass;
                         saveUsers();
                         closeModal();
-                        alert("Password berhasil diubah!");
+                        customAlert("Password berhasil diubah!");
                     }
                 });
             });
@@ -1466,7 +1468,8 @@
                 document.getElementById("owner-panel-row")?.addEventListener("click", () => openOwnerPanel());
             }
             document.getElementById("logout-btn")?.addEventListener("click", () => {
-                if (confirm("Yakin ingin keluar?")) {
+                customConfirm("Yakin ingin keluar?").then(ok => {
+                    if (!ok) return;
                     clearSession();
                     loggedInUser = null;
                     isOwner = false;
@@ -1476,7 +1479,7 @@
                     document.getElementById('banned-overlay').classList.remove('open');
                     document.querySelectorAll('.screen').forEach(s => s.classList.remove('open'));
                     renderMain();
-                }
+                });
             });
         }
 
@@ -1720,7 +1723,7 @@
             conversationsCol().doc(c.cloudConversationId).update({
                 messages: firebase.firestore.FieldValue.arrayUnion(payload),
                 lastActivity: Date.now()
-            }).catch(e => { console.error("sendCloudMessage:", e); alert("Gagal mengirim pesan, cek koneksi internet."); });
+            }).catch(e => { console.error("sendCloudMessage:", e); customAlert("Gagal mengirim pesan, cek koneksi internet."); });
         }
 
         function sendMessage() {
@@ -1805,7 +1808,7 @@
         }
 
         function requestVerification(targetType, targetId, targetName) {
-            if (isOwner) { alert("Akun Owner sudah otomatis tercentang biru."); return; }
+            if (isOwner) { customAlert("Akun Owner sudah otomatis tercentang biru."); return; }
             OWNER_REQUESTS.push({ id: nextId++, targetType, targetId, targetName, status: "pending", time: "Baru saja" });
             const help = CHATS.find(x => x.id === 999);
             if (help) {
@@ -1817,7 +1820,7 @@
                     status: "read" });
             }
             if (activeChatId === 999) renderMessages();
-            alert("Permintaan centang biru terkirim ke Owner!");
+            customAlert("Permintaan centang biru terkirim ke Owner!");
             if (infoTarget) renderInfo();
             saveData();
         }
@@ -2011,11 +2014,11 @@
                 document.getElementById("edit-username-btn")?.addEventListener("click", () => promptEdit("Username",
                     ME.username, v => {
                         if (v === OWNER_DOC_ID && !isOwner) {
-                            alert("Username tidak tersedia!");
+                            customAlert("Username tidak tersedia!");
                             return;
                         }
                         if (USERS.find(u => u.username === v && u.username !== loggedInUser.username)) {
-                            alert("Username sudah digunakan!");
+                            customAlert("Username sudah digunakan!");
                             return;
                         }
                         const oldUsername = ME.username;
@@ -2080,7 +2083,7 @@
                     saveData(); }));
             document.getElementById("copy-code-btn")?.addEventListener("click", () => {
                 if (navigator.clipboard) navigator.clipboard.writeText(c.inviteCode).catch(() => {});
-                alert("Kode undangan disalin: " + c.inviteCode);
+                customAlert("Kode undangan disalin: " + c.inviteCode);
             });
             document.getElementById("add-member-btn")?.addEventListener("click", () => openModal("addMember"));
             document.getElementById("create-subgroup-btn")?.addEventListener("click", () => openModal("subgroup"));
@@ -2101,9 +2104,10 @@
                 saveData();
             });
             document.getElementById("report-contact-row")?.addEventListener("click", () => {
-                const reason = prompt(`Laporkan ${c.name}? Ceritakan alasannya singkat (opsional):`);
-                if (reason === null) return;
-                alert("Laporan kamu udah dikirim. Terima kasih sudah bantu jaga komunitas tetap aman.");
+                customPrompt(`Laporkan ${c.name}? Ceritakan alasannya singkat (opsional):`, "", "Laporkan Kontak").then(reason => {
+                    if (reason === null) return;
+                    customAlert("Laporan kamu udah dikirim. Terima kasih sudah bantu jaga komunitas tetap aman.");
+                });
             });
             document.getElementById("toggle-block-row")?.addEventListener("click", () => {
                 c.blockedByMe = !c.blockedByMe;
@@ -2113,13 +2117,15 @@
                 saveData();
             });
             document.getElementById("delete-chat-row")?.addEventListener("click", () => {
-                if (!confirm(`Hapus percakapan dengan ${c.name}? Riwayat chat di perangkat ini akan hilang.`)) return;
-                CHATS = CHATS.filter(x => x.id !== c.id);
-                document.getElementById("info-screen").classList.remove("open");
-                document.getElementById("chat-screen").classList.remove("open");
-                activeTab = "chats";
-                renderMain();
-                saveData();
+                customConfirm(`Hapus percakapan dengan ${c.name}? Riwayat chat di perangkat ini akan hilang.`).then(ok => {
+                    if (!ok) return;
+                    CHATS = CHATS.filter(x => x.id !== c.id);
+                    document.getElementById("info-screen").classList.remove("open");
+                    document.getElementById("chat-screen").classList.remove("open");
+                    activeTab = "chats";
+                    renderMain();
+                    saveData();
+                });
             });
 
             if (isOwner && OWNER_MODE) {
@@ -2403,7 +2409,7 @@
                     renderMain();
                     saveData();
                     saveBanRequests();
-                    alert(`Akun @${r.username} telah dibuka blokir.`);
+                    customAlert(`Akun @${r.username} telah dibuka blokir.`);
                 }
             }));
             el.querySelectorAll("[data-reject-unban]").forEach(b => b.addEventListener("click", () => {
@@ -2490,28 +2496,53 @@
             const isPreset = OWNER_LABEL_PRESETS.includes(current);
             const backdrop = document.getElementById("modal-backdrop");
             const sheet = document.getElementById("modal-sheet");
+            const optionDefs = [{ value: "", text: "(Tidak ada label)" },
+                ...OWNER_LABEL_PRESETS.map(p => ({ value: p, text: p })),
+                { value: "__custom__", text: "Custom..." }];
+            let selectedValue = (current && !isPreset) ? "__custom__" : current;
             sheet.innerHTML = `
                 <div class="modal-title">Label untuk ${escapeHtml(c.name)}</div>
-                <select class="modal-input" id="label-select">
-                    <option value="">(Tidak ada label)</option>
-                    ${OWNER_LABEL_PRESETS.map(p => `<option value="${escapeHtml(p)}" ${current === p ? 'selected' : ''}>${escapeHtml(p)}</option>`).join("")}
-                    <option value="__custom__" ${(current && !isPreset) ? 'selected' : ''}>Custom...</option>
-                </select>
-                <input class="modal-input" id="label-custom-input" placeholder="Tulis label custom..." style="${(current && !isPreset) ? '' : 'display:none;'}" value="${(current && !isPreset) ? escapeHtml(current) : ''}" />
+                <div class="custom-select" id="label-custom-select">
+                    <button type="button" class="custom-select-trigger" id="label-select-trigger">
+                        <span id="label-select-current-text">${escapeHtml(current || "(Tidak ada label)")}</span>
+                        ${svgIcon('chevron-right', 15, 'var(--muted)', 2)}
+                    </button>
+                    <div class="custom-select-options" id="label-select-options">
+                        ${optionDefs.map(o => `
+                            <div class="custom-select-option${selectedValue === o.value ? ' selected' : ''}" data-value="${escapeHtml(o.value)}">
+                                <span class="option-radio"></span><span>${escapeHtml(o.text)}</span>
+                            </div>`).join("")}
+                    </div>
+                </div>
+                <input class="modal-input" id="label-custom-input" placeholder="Tulis label custom..." style="${selectedValue === "__custom__" ? '' : 'display:none;'}" value="${(current && !isPreset) ? escapeHtml(current) : ''}" />
                 <div class="modal-actions">
                     <button class="btn-ghost" id="modal-cancel">Batal</button>
                     <button class="primary-btn" id="modal-save-label">Simpan</button>
                 </div>`;
             backdrop.classList.add("open");
-            const sel = document.getElementById("label-select");
+            const wrap = document.getElementById("label-custom-select");
+            const trigger = document.getElementById("label-select-trigger");
+            const currentText = document.getElementById("label-select-current-text");
             const customInput = document.getElementById("label-custom-input");
-            sel.addEventListener("change", () => {
-                customInput.style.display = sel.value === "__custom__" ? "block" : "none";
-                if (sel.value === "__custom__") customInput.focus();
+            trigger.addEventListener("click", () => wrap.classList.toggle("open"));
+            wrap.querySelectorAll(".custom-select-option").forEach(opt => {
+                opt.addEventListener("click", () => {
+                    selectedValue = opt.dataset.value;
+                    wrap.querySelectorAll(".custom-select-option").forEach(o => o.classList.remove("selected"));
+                    opt.classList.add("selected");
+                    currentText.textContent = selectedValue === "__custom__" ? "Custom..." : (opt.querySelector("span:last-child").textContent);
+                    customInput.style.display = selectedValue === "__custom__" ? "block" : "none";
+                    if (selectedValue === "__custom__") customInput.focus();
+                    wrap.classList.remove("open");
+                });
+            });
+            document.addEventListener("click", function outsideClose(e) {
+                if (!wrap.contains(e.target)) wrap.classList.remove("open");
+                if (!backdrop.classList.contains("open")) document.removeEventListener("click", outsideClose);
             });
             document.getElementById("modal-cancel").addEventListener("click", closeModal);
             document.getElementById("modal-save-label").addEventListener("click", () => {
-                let finalLabel = sel.value === "__custom__" ? customInput.value.trim() : sel.value;
+                let finalLabel = selectedValue === "__custom__" ? customInput.value.trim() : selectedValue;
                 if (!finalLabel) finalLabel = null;
                 c.label = finalLabel;
                 if (userData) { userData.label = finalLabel;
@@ -2585,7 +2616,7 @@
                 unreadOwner: true
             }, { merge: true }).then(() => ref.update({
                 messages: firebase.firestore.FieldValue.arrayUnion(msg)
-            })).catch(e => { console.error("sendHelpMessageAsUser:", e); alert("Gagal mengirim pesan ke Owner, cek koneksi internet."); });
+            })).catch(e => { console.error("sendHelpMessageAsUser:", e); customAlert("Gagal mengirim pesan ke Owner, cek koneksi internet."); });
         }
 
         function sendHelpReplyAsOwner(username, text) {
@@ -2706,7 +2737,7 @@
             renderOwnerPanel();
             renderMain();
             saveData();
-            alert("Story berhasil dikirim ke semua pengguna!");
+            customAlert("Story berhasil dikirim ke semua pengguna!");
         }
 
         function sendOwnerNews(title, content, mediaUrl, mediaType) {
@@ -2739,7 +2770,7 @@
             renderOwnerPanel();
             renderMain();
             saveData();
-            alert("Berita berhasil dikirim ke Bantuan Owner!");
+            customAlert("Berita berhasil dikirim ke Bantuan Owner!");
         }
 
         /* ================= MODALS ================= */
@@ -2800,7 +2831,7 @@
                 });
                 document.getElementById("modal-confirm-story").addEventListener("click", () => {
                     const text = document.getElementById("modal-story-text").value.trim();
-                    if (!mediaData && !text) { alert("Isi teks atau pilih media!"); return; }
+                    if (!mediaData && !text) { customAlert("Isi teks atau pilih media!"); return; }
                     sendOwnerStory(text, mediaData, mediaType);
                     closeModal();
                 });
@@ -2822,7 +2853,7 @@
                 document.getElementById("modal-confirm-news").addEventListener("click", () => {
                     const title = document.getElementById("modal-news-title").value.trim();
                     const content = document.getElementById("modal-news-content").value.trim();
-                    if (!title || !content) { alert("Judul dan isi berita harus diisi!"); return; }
+                    if (!title || !content) { customAlert("Judul dan isi berita harus diisi!"); return; }
                     sendOwnerNews(title, content, null, null);
                     closeModal();
                 });
@@ -2859,7 +2890,7 @@
                 document.getElementById("modal-confirm-news").addEventListener("click", () => {
                     const title = document.getElementById("modal-news-title").value.trim();
                     const content = document.getElementById("modal-news-content").value.trim();
-                    if (!title || !content) { alert("Judul dan isi berita harus diisi!"); return; }
+                    if (!title || !content) { customAlert("Judul dan isi berita harus diisi!"); return; }
                     sendOwnerNews(title, content, mediaData, mediaType);
                     closeModal();
                 });
@@ -3020,7 +3051,7 @@
                         renderMain();
                         saveData();
                     } else {
-                        alert("Kode tidak ditemukan. Coba periksa lagi ya! (Coba: KOPI24 atau DEV99)");
+                        customAlert("Kode tidak ditemukan. Coba periksa lagi ya! (Coba: KOPI24 atau DEV99)");
                     }
                 });
                 return;
@@ -3045,6 +3076,69 @@
                         `<div style="margin-top:6px;font-size:12px;color:var(--accent-dark);">Sampul ${type === 'video' ? 'video' : 'foto'} dipilih ✓</div>`;
                 }));
             document.getElementById("modal-confirm").addEventListener("click", () => confirmModal(kind));
+        }
+
+        /* ================= CUSTOM DIALOGS (ganti alert/confirm/prompt bawaan browser) =================
+           Dialog native browser (alert/confirm/prompt) menampilkan alamat website di judulnya,
+           jadi diganti pakai modal sendiri yang mengikuti tema aplikasi. */
+        function customAlert(message, title) {
+            return new Promise(resolve => {
+                const backdrop = document.getElementById("modal-backdrop");
+                const sheet = document.getElementById("modal-sheet");
+                sheet.innerHTML = `
+                    <div class="modal-title">${escapeHtml(title || "Pemberitahuan")}</div>
+                    <div class="modal-message">${escapeHtml(message)}</div>
+                    <div class="modal-actions">
+                        <button class="primary-btn" id="modal-dlg-ok">OK</button>
+                    </div>`;
+                backdrop.classList.add("open");
+                document.getElementById("modal-dlg-ok").addEventListener("click", () => {
+                    closeModal();
+                    resolve(true);
+                });
+            });
+        }
+
+        function customConfirm(message, title) {
+            return new Promise(resolve => {
+                const backdrop = document.getElementById("modal-backdrop");
+                const sheet = document.getElementById("modal-sheet");
+                sheet.innerHTML = `
+                    <div class="modal-title">${escapeHtml(title || "Konfirmasi")}</div>
+                    <div class="modal-message">${escapeHtml(message)}</div>
+                    <div class="modal-actions">
+                        <button class="btn-ghost" id="modal-dlg-cancel">Batal</button>
+                        <button class="primary-btn" id="modal-dlg-yes">Ya</button>
+                    </div>`;
+                backdrop.classList.add("open");
+                let settled = false;
+                const finish = (val) => { if (settled) return; settled = true; closeModal(); resolve(val); };
+                document.getElementById("modal-dlg-cancel").addEventListener("click", () => finish(false));
+                document.getElementById("modal-dlg-yes").addEventListener("click", () => finish(true));
+            });
+        }
+
+        function customPrompt(message, defaultValue, title, placeholder) {
+            return new Promise(resolve => {
+                const backdrop = document.getElementById("modal-backdrop");
+                const sheet = document.getElementById("modal-sheet");
+                sheet.innerHTML = `
+                    <div class="modal-title">${escapeHtml(title || "Masukkan")}</div>
+                    <div class="modal-message">${escapeHtml(message)}</div>
+                    <input class="modal-input" id="modal-dlg-input" value="${escapeHtml(defaultValue || "")}" placeholder="${escapeHtml(placeholder || "")}" />
+                    <div class="modal-actions">
+                        <button class="btn-ghost" id="modal-dlg-cancel">Batal</button>
+                        <button class="primary-btn" id="modal-dlg-ok">Kirim</button>
+                    </div>`;
+                backdrop.classList.add("open");
+                const input = document.getElementById("modal-dlg-input");
+                input.focus();
+                let settled = false;
+                const finish = (val) => { if (settled) return; settled = true; closeModal(); resolve(val); };
+                document.getElementById("modal-dlg-cancel").addEventListener("click", () => finish(null));
+                document.getElementById("modal-dlg-ok").addEventListener("click", () => finish(input.value.trim()));
+                input.addEventListener("keydown", (e) => { if (e.key === "Enter") finish(input.value.trim()); });
+            });
         }
 
         function closeModal() {
@@ -3198,7 +3292,9 @@
                 document.getElementById("story-viewers-btn").addEventListener("click", () => openViewersSheet(item));
                 document.getElementById("story-delete-btn").addEventListener("click", (e) => {
                     e.stopPropagation();
-                    if (confirm("Hapus story ini? Tindakan ini tidak bisa dibatalkan.")) deleteMyStory();
+                    customConfirm("Hapus story ini? Tindakan ini tidak bisa dibatalkan.").then(ok => {
+                        if (ok) deleteMyStory();
+                    });
                 });
             } else {
                 const liked = item.likes && item.likes.includes("Saya");
