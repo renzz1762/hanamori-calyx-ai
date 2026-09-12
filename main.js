@@ -23,6 +23,9 @@
             "lock": '<rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
             "unlock": '<rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.5-2.5"/>',
             "bell": '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+            "bell-off": '<path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><line x1="1" y1="1" x2="23" y2="23"/>',
+            "flag": '<path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/>',
+            "trash": '<polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>',
             "help-circle": '<circle cx="12" cy="12" r="9.5"/><path d="M9.1 9a3 3 0 1 1 5.8 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
             "info": '<circle cx="12" cy="12" r="9.5"/><line x1="12" y1="16" x2="12" y2="11.5"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
             "chevron-right": '<polyline points="9 18 15 12 9 6"/>',
@@ -1549,8 +1552,8 @@
             document.getElementById("chat-header-info").onclick = () => openInfo("chat", c.id);
             const draftInput = document.getElementById("draft-input");
             draftInput.value = "";
-            draftInput.disabled = !!c.banned;
-            draftInput.placeholder = c.banned ? "Diblokir oleh Owner" : "Ketik pesan";
+            draftInput.disabled = !!c.banned || !!c.blockedByMe;
+            draftInput.placeholder = c.banned ? "Diblokir oleh Owner" : (c.blockedByMe ? "Anda memblokir kontak ini" : "Ketik pesan");
             updateSendButton();
             // Owner sudah otomatis tercentang biru, jadi tombol pengajuan tidak perlu ditampilkan untuknya.
             document.getElementById("help-quickbar").style.display = (c.type === "help" && !isOwner && !ME.verified) ? "block" : "none";
@@ -1753,6 +1756,16 @@
         function renderChatInfo(c) {
             const isUserOwner = isOwner;
             if (c.type === "dm" || c.type === "help") {
+                const mediaItems = (c.messages || []).filter(m => m.mediaUrl);
+                const mediaGrid = mediaItems.length ? `
+                    <div class="info-section-title">Media Bersama (${mediaItems.length})</div>
+                    <div class="media-grid">
+                      ${mediaItems.slice(-12).reverse().map(m => m.mediaType === "video" ?
+                        `<div class="media-cell"><video src="${m.mediaUrl}" muted></video></div>` :
+                        `<div class="media-cell"><img src="${m.mediaUrl}"/></div>`).join("")}
+                    </div>` : `
+                    <div class="info-section-title">Media Bersama</div>
+                    <div style="padding:0 18px 14px;font-size:12.5px;color:var(--muted);">Belum ada foto atau video yang dikirim di chat ini.</div>`;
                 return `
                   <div class="info-header">
                     ${bigAvatarHTML(c, false)}
@@ -1762,7 +1775,31 @@
                   </div>
                   <div class="settings-divider"></div>
                   ${(c.type === "help" && !isUserOwner && !ME.verified) ? `<div style="padding:14px 18px;"><button class="primary-btn" id="ask-verify-help" style="width:100%;">Ajukan Centang Biru untuk Akun Saya</button></div><div class="settings-divider"></div>` : ''}
+                  ${mediaGrid}
+                  ${c.type === "dm" ? `
+                  <div class="settings-divider"></div>
+                  <div class="settings-row" id="toggle-mute-row">
+                    <div>${svgIcon(c.muted ? 'bell-off' : 'bell', 18, 'var(--muted2)', 2)}</div>
+                    <div class="settings-label" style="margin:0;">${c.muted ? 'Aktifkan lagi notifikasi' : 'Bisukan notifikasi'}</div>
+                  </div>
+                  <div class="settings-row" id="toggle-pin-row-info">
+                    <div>${svgIcon('pin', 18, 'var(--muted2)', 2)}</div>
+                    <div class="settings-label" style="margin:0;">${c.pinned ? 'Lepas sematan' : 'Sematkan chat'}</div>
+                  </div>
+                  <div class="settings-row" id="report-contact-row">
+                    <div>${svgIcon('flag', 18, 'var(--muted2)', 2)}</div>
+                    <div class="settings-label" style="margin:0;">Laporkan kontak</div>
+                  </div>
+                  <div class="settings-row" id="toggle-block-row">
+                    <div>${svgIcon('ban', 18, 'var(--danger)', 2)}</div>
+                    <div class="settings-label" style="margin:0;color:var(--danger);">${c.blockedByMe ? 'Buka blokir kontak' : 'Blokir kontak'}</div>
+                  </div>
+                  <div class="settings-row" id="delete-chat-row">
+                    <div>${svgIcon('trash', 18, 'var(--danger)', 2)}</div>
+                    <div class="settings-label" style="margin:0;color:var(--danger);">Hapus percakapan</div>
+                  </div>` : ''}
                   ${isUserOwner && OWNER_MODE && c.type === "dm" ? `
+                    <div class="settings-divider"></div>
                     <div class="info-section-title">Kontrol Owner</div>
                     <div style="padding:6px 18px 16px;display:flex;flex-direction:column;gap:10px;">
                       <button class="primary-btn" id="toggle-verify-btn" style="width:100%;">${c.verified ? 'Cabut' : 'Beri'} Centang Biru</button>
@@ -1918,6 +1955,39 @@
                 "group" ? "group" : "channel", c.id, c.name));
             document.getElementById("ask-verify-help")?.addEventListener("click", () => requestVerification("user",
                 "me", ME.name));
+
+            document.getElementById("toggle-mute-row")?.addEventListener("click", () => {
+                c.muted = !c.muted;
+                renderInfo();
+                saveData();
+            });
+            document.getElementById("toggle-pin-row-info")?.addEventListener("click", () => {
+                c.pinned = !c.pinned;
+                renderInfo();
+                renderMain();
+                saveData();
+            });
+            document.getElementById("report-contact-row")?.addEventListener("click", () => {
+                const reason = prompt(`Laporkan ${c.name}? Ceritakan alasannya singkat (opsional):`);
+                if (reason === null) return;
+                alert("Laporan kamu udah dikirim. Terima kasih sudah bantu jaga komunitas tetap aman.");
+            });
+            document.getElementById("toggle-block-row")?.addEventListener("click", () => {
+                c.blockedByMe = !c.blockedByMe;
+                renderInfo();
+                renderMain();
+                if (activeChatId === c.id) renderChatHeader();
+                saveData();
+            });
+            document.getElementById("delete-chat-row")?.addEventListener("click", () => {
+                if (!confirm(`Hapus percakapan dengan ${c.name}? Riwayat chat di perangkat ini akan hilang.`)) return;
+                CHATS = CHATS.filter(x => x.id !== c.id);
+                document.getElementById("info-screen").classList.remove("open");
+                document.getElementById("chat-screen").classList.remove("open");
+                activeTab = "chats";
+                renderMain();
+                saveData();
+            });
 
             if (isOwner && OWNER_MODE) {
                 document.getElementById("toggle-verify-btn")?.addEventListener("click", () => { c.verified = !c
