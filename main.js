@@ -88,6 +88,7 @@
         function ownerNewsCol() { return db.collection('ownerNews'); }
         function ownerRequestsCol() { return db.collection('ownerRequests'); }
         function banRequestsCol() { return db.collection('banRequests'); }
+        function helpChatsCol() { return db.collection('helpChats'); }
         function statusesCol() { return db.collection('statuses'); }
         function conversationsCol() { return db.collection('conversations'); }
         function presenceCol() { return db.collection('presence'); }
@@ -149,6 +150,11 @@
                         ME.banner = fresh.banner || null;
                         ME.bannerType = fresh.bannerType || null;
                         ME.verified = isOwner ? true : (fresh.verified || false);
+                        ME.label = fresh.label || null;
+                        ME.linkTiktok = fresh.linkTiktok || "";
+                        ME.linkYoutube = fresh.linkYoutube || "";
+                        ME.linkInstagram = fresh.linkInstagram || "";
+                        ME.linkRoblox = fresh.linkRoblox || "";
                         if (fresh.banned) showBannedOverlay(fresh.banReason || "Anda telah diblokir oleh Owner.");
                     }
                 }
@@ -201,6 +207,11 @@
                         ME.banner = user.banner || null;
                         ME.bannerType = user.bannerType || null;
                         ME.verified = isOwner ? true : (user.verified || false);
+                        ME.label = user.label || null;
+                        ME.linkTiktok = user.linkTiktok || "";
+                        ME.linkYoutube = user.linkYoutube || "";
+                        ME.linkInstagram = user.linkInstagram || "";
+                        ME.linkRoblox = user.linkRoblox || "";
                         return true;
                     }
                 }
@@ -257,6 +268,11 @@
                 ME.banner = user.banner || null;
                 ME.bannerType = user.bannerType || null;
                 ME.verified = isOwner ? true : (user.verified || false);
+                ME.label = user.label || null;
+                ME.linkTiktok = user.linkTiktok || "";
+                ME.linkYoutube = user.linkYoutube || "";
+                ME.linkInstagram = user.linkInstagram || "";
+                ME.linkRoblox = user.linkRoblox || "";
                 initApp();
                 setPresence(true);
                 return true;
@@ -285,7 +301,12 @@
                 avatarType: null,
                 banner: null,
                 bannerType: null,
-                verified: false
+                verified: false,
+                label: null,
+                linkTiktok: "",
+                linkYoutube: "",
+                linkInstagram: "",
+                linkRoblox: ""
             };
             USERS.push(newUser);
             saveUsers();
@@ -340,7 +361,9 @@
 
         /* ================= DATA ================= */
         let ME = { name: "Pengguna", username: "user", about: "Halo! Saya pengguna Chat App", phone: "-",
-            avatar: null, avatarType: null, banner: null, bannerType: null, verified: false };
+            avatar: null, avatarType: null, banner: null, bannerType: null, verified: false,
+            label: null, linkTiktok: "", linkYoutube: "", linkInstagram: "", linkRoblox: "" };
+        const OWNER_LABEL_PRESETS = ["KONTEN CREATOR", "DEVELOPER", "ADMIN", "STAFF", "ARTIS", "CREATOR ROBLOX", "STORE"];
         let OWNER_MODE = false;
         let OWNER_REQUESTS = [];
         let infoTarget = null;
@@ -521,6 +544,11 @@
                     userData.banner = ME.banner;
                     userData.bannerType = ME.bannerType;
                     userData.verified = isOwner ? true : ME.verified;
+                    userData.label = ME.label || null;
+                    userData.linkTiktok = ME.linkTiktok || "";
+                    userData.linkYoutube = ME.linkYoutube || "";
+                    userData.linkInstagram = ME.linkInstagram || "";
+                    userData.linkRoblox = ME.linkRoblox || "";
                     saveUsers();
                 }
             }
@@ -604,6 +632,8 @@
             listenStatuses();
             listenPresence();
             listenConversations();
+            if (isOwner) listenHelpChatsAll();
+            else listenMyHelpChat();
             appBooted = true;
             renderMain();
             updateUserData();
@@ -712,6 +742,90 @@
 
         function verifiedBadge(v) {
             return v ? `<span class="verified-badge">${verifiedBadgeSVG(14)}</span>` : "";
+        }
+
+        /* ================= LABEL & SOSIAL MEDIA ================= */
+        function labelBadge(label) {
+            if (!label) return "";
+            return `<span class="user-label-badge">${escapeHtml(label)}</span>`;
+        }
+        function getUserByUsername(username) {
+            if (!username) return null;
+            return USERS.find(u => u.username === username) || null;
+        }
+        function socialLinksOf(entity) {
+            entity = entity || {};
+            return {
+                tiktok: entity.linkTiktok || "",
+                youtube: entity.linkYoutube || "",
+                instagram: entity.linkInstagram || "",
+                roblox: entity.linkRoblox || ""
+            };
+        }
+        function normalizeLinkUrl(v, kind) {
+            if (!v) return "#";
+            v = v.trim();
+            if (/^https?:\/\//i.test(v)) return v;
+            const clean = v.replace(/^@/, "");
+            if (kind === "tiktok") return "https://tiktok.com/@" + encodeURIComponent(clean);
+            if (kind === "youtube") return "https://youtube.com/@" + encodeURIComponent(clean);
+            if (kind === "instagram") return "https://instagram.com/" + encodeURIComponent(clean);
+            if (kind === "roblox") return "https://www.roblox.com/users/profile?username=" + encodeURIComponent(clean);
+            return v;
+        }
+        function socialLinksHTML(entity) {
+            const s = socialLinksOf(entity);
+            const items = [
+                { key: "tiktok", label: "TikTok", value: s.tiktok, ini: "TT", color: "#111417" },
+                { key: "youtube", label: "YouTube", value: s.youtube, ini: "YT", color: "#C4302B" },
+                { key: "instagram", label: "Instagram", value: s.instagram, ini: "IG", color: "#B23A78" },
+                { key: "roblox", label: "Roblox", value: s.roblox, ini: "RB", color: "#5B5B5B" },
+            ].filter(i => i.value);
+            if (!items.length) return "";
+            return `
+                <div class="info-section-title">Tautan Sosial</div>
+                <div style="padding:0 18px 14px;display:flex;flex-direction:column;gap:8px;">
+                  ${items.map(i => `
+                    <a class="social-link-row" href="${escapeHtml(normalizeLinkUrl(i.value, i.key))}" target="_blank" rel="noopener">
+                      <span class="social-ini" style="background:${i.color};">${i.ini}</span>
+                      <span style="flex:1;min-width:0;">
+                        <span style="display:block;font-size:13px;font-weight:600;">${i.label}</span>
+                        <span style="display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(i.value)}</span>
+                      </span>
+                      ${svgIcon('chevron-right',16,'var(--muted)',2)}
+                    </a>`).join("")}
+                </div>`;
+        }
+        function openSocialLinksModal() {
+            const backdrop = document.getElementById("modal-backdrop");
+            const sheet = document.getElementById("modal-sheet");
+            sheet.innerHTML = `
+                <div class="modal-title">Tautan Media Sosial</div>
+                <div style="font-size:12.5px;color:var(--muted2);margin-bottom:12px;">Isi username atau link lengkap. Kosongkan untuk menghapus tautan.</div>
+                <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:4px;">TIKTOK</div>
+                <input class="modal-input" id="social-tiktok" placeholder="username atau link TikTok" value="${escapeHtml(ME.linkTiktok||"")}" />
+                <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:4px;">YOUTUBE</div>
+                <input class="modal-input" id="social-youtube" placeholder="username atau link YouTube" value="${escapeHtml(ME.linkYoutube||"")}" />
+                <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:4px;">INSTAGRAM</div>
+                <input class="modal-input" id="social-instagram" placeholder="username atau link Instagram" value="${escapeHtml(ME.linkInstagram||"")}" />
+                <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:4px;">AKUN ROBLOX</div>
+                <input class="modal-input" id="social-roblox" placeholder="username Roblox" value="${escapeHtml(ME.linkRoblox||"")}" />
+                <div class="modal-actions">
+                    <button class="btn-ghost" id="modal-cancel">Batal</button>
+                    <button class="primary-btn" id="modal-save-social">Simpan</button>
+                </div>`;
+            backdrop.classList.add("open");
+            document.getElementById("modal-cancel").addEventListener("click", closeModal);
+            document.getElementById("modal-save-social").addEventListener("click", () => {
+                ME.linkTiktok = document.getElementById("social-tiktok").value.trim();
+                ME.linkYoutube = document.getElementById("social-youtube").value.trim();
+                ME.linkInstagram = document.getElementById("social-instagram").value.trim();
+                ME.linkRoblox = document.getElementById("social-roblox").value.trim();
+                closeModal();
+                renderInfo();
+                saveData();
+                updateUserData();
+            });
         }
 
         function avatarHTML(entity, opts) {
@@ -899,7 +1013,7 @@
                     </div>
                     <div class="chat-info">
                       <div class="chat-top">
-                        <div class="chat-name">${escapeHtml(c.name)} ${verifiedBadge(c.verified)} ${(c.type !== "dm" && c.type !== "help") ? '<span class="type-badge">' + typeBadge(c.type) + '</span>' : ''} ${c.banned ? `<span style="color:#C9553B;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;gap:2px;">${svgIcon('ban',11,'#C9553B',2.4)} Diblokir</span>` : ''}</div>
+                        <div class="chat-name">${escapeHtml(c.name)} ${verifiedBadge(c.verified)} ${c.type === "dm" ? labelBadge(getUserByUsername(c.username) && getUserByUsername(c.username).label) : ''} ${(c.type !== "dm" && c.type !== "help") ? '<span class="type-badge">' + typeBadge(c.type) + '</span>' : ''} ${c.banned ? `<span style="color:#C9553B;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;gap:2px;">${svgIcon('ban',11,'#C9553B',2.4)} Diblokir</span>` : ''}</div>
                         <span class="chat-time">${c.pinned ? svgIcon('pin',11,'#9AA6A3',2.2) : ''} ${last ? last.time : ""}</span>
                       </div>
                       <div class="chat-last">${lastPreview}${c.unread ? `<span class="chat-unread-badge">${c.unread > 99 ? '99+' : c.unread}</span>` : ''}</div>
@@ -1475,7 +1589,7 @@
                 <div class="chat-item" data-start-chat="${escapeHtml(u.username)}">
                   ${avatarHTML(u, { size: 44 })}
                   <div class="chat-info">
-                    <div class="chat-top"><div class="chat-name">${escapeHtml(u.name || u.username)} ${verifiedBadge(u.verified)}</div></div>
+                    <div class="chat-top"><div class="chat-name">${escapeHtml(u.name || u.username)} ${verifiedBadge(u.verified)} ${labelBadge(u.label)}</div></div>
                     <div class="chat-last">@${escapeHtml(u.username)}</div>
                   </div>
                 </div>`).join("") : `<div style="padding:16px 4px;font-size:12.5px;color:var(--muted);text-align:center;">${loggedInUser ? 'Ketik username untuk mencari pengguna lain.' : ''}</div>`;
@@ -1545,7 +1659,8 @@
             if (!c) return;
             document.getElementById("chat-avatar-wrap").innerHTML = avatarHTML(c, { size: 38, square: c.type !== "dm" &&
                     c.type !== "help" });
-            document.getElementById("chat-name").innerHTML = escapeHtml(c.name) + " " + verifiedBadge(c.verified) + (c
+            const headerLabel = c.type === "dm" ? labelBadge(getUserByUsername(c.username) && getUserByUsername(c.username).label) : "";
+            document.getElementById("chat-name").innerHTML = escapeHtml(c.name) + " " + verifiedBadge(c.verified) + " " + headerLabel + (c
                 .banned ? ` <span style="color:#C9553B;font-size:11px;font-weight:700;display:inline-flex;">${svgIcon('ban',12,'#C9553B',2.4)}</span>` : "");
             let statusText = c.lastSeen;
             if (c.type === "dm" && c.username && PRESENCE[c.username]) {
@@ -1614,7 +1729,10 @@
             if (!text || activeChatId == null) return;
             const c = CHATS.find(x => x.id === activeChatId);
             if (!c || c.banned) return;
-            if (c.cloudConversationId) {
+            if (c.type === "help" && !isOwner) {
+                c.messages.push({ id: c.messages.length + 1, from: "me", text, time: "Sekarang", status: "sent" });
+                sendHelpMessageAsUser(text);
+            } else if (c.cloudConversationId) {
                 sendCloudMessage(c, { text, time: "Sekarang", status: "sent" });
             } else {
                 c.messages.push({ id: c.messages.length + 1, from: "me", text, time: "Sekarang", status: "sent" });
@@ -1724,7 +1842,7 @@
                 </div>
                 <div class="info-header" style="padding-top:14px;">
                   ${bigAvatarHTML(ME, true, "me-avatar-edit")}
-                  <div class="info-name">${escapeHtml(ME.name)} ${verifiedBadge(ME.verified)} ${isUserOwner ? '<span class="owner-crown-badge">' + svgIcon('crown',10,'#fff',2.4) + ' OWNER</span>' : ''}</div>
+                  <div class="info-name">${escapeHtml(ME.name)} ${verifiedBadge(ME.verified)} ${labelBadge(ME.label)} ${isUserOwner ? '<span class="owner-crown-badge">' + svgIcon('crown',10,'#fff',2.4) + ' OWNER</span>' : ''}</div>
                   <div class="info-username">@${escapeHtml(ME.username)}</div>
                   <div class="info-about">${escapeHtml(ME.about)}</div>
                   <div class="info-actions">
@@ -1732,9 +1850,11 @@
                     <div class="action-chip" id="edit-username-btn"><div class="chip-icon">${svgIcon('user',18,'currentColor')}</div>Username</div>
                     <div class="action-chip" id="edit-about-btn"><div class="chip-icon">${svgIcon('info',18,'currentColor')}</div>Bio</div>
                     <div class="action-chip" id="edit-phone-btn"><div class="chip-icon">${svgIcon('phone',18,'currentColor')}</div>Nomor</div>
+                    <div class="action-chip" id="edit-social-btn"><div class="chip-icon">${svgIcon('link',18,'currentColor')}</div>Sosial</div>
                   </div>
                 </div>
                 <div class="settings-divider"></div>
+                ${socialLinksHTML(ME)}
                 <div class="info-section-title">Informasi Akun</div>
                 <div style="padding:8px 18px 16px;">
                     <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">
@@ -1776,15 +1896,17 @@
                     </div>` : `
                     <div class="info-section-title">Media Bersama</div>
                     <div style="padding:0 18px 14px;font-size:12.5px;color:var(--muted);">Belum ada foto atau video yang dikirim di chat ini.</div>`;
+                const otherAcc = c.type === "dm" ? getUserByUsername(c.username) : null;
                 return `
                   <div class="info-header">
                     ${bigAvatarHTML(c, false)}
-                    <div class="info-name">${escapeHtml(c.name)} ${verifiedBadge(c.verified)}</div>
+                    <div class="info-name">${escapeHtml(c.name)} ${verifiedBadge(c.verified)} ${labelBadge(otherAcc && otherAcc.label)}</div>
                     <div class="info-username">@${escapeHtml(c.username || "-")}</div>
                     <div class="info-about">${escapeHtml((c.type === "dm" && c.username && PRESENCE[c.username]) ? (formatLastSeen(c.username) || c.lastSeen || "") : (c.lastSeen || ""))}</div>
                   </div>
                   <div class="settings-divider"></div>
                   ${(c.type === "help" && !isUserOwner && !ME.verified) ? `<div style="padding:14px 18px;"><button class="primary-btn" id="ask-verify-help" style="width:100%;">Ajukan Centang Biru untuk Akun Saya</button></div><div class="settings-divider"></div>` : ''}
+                  ${otherAcc ? socialLinksHTML(otherAcc) : ''}
                   ${mediaGrid}
                   ${c.type === "dm" ? `
                   <div class="settings-divider"></div>
@@ -1926,6 +2048,7 @@
                         saveData();
                         updateUserData();
                     }));
+                document.getElementById("edit-social-btn")?.addEventListener("click", openSocialLinksModal);
                 document.getElementById("request-verify-btn")?.addEventListener("click", () => requestVerification(
                     "user", "me", ME.name));
                 if (isOwner && OWNER_MODE) {
@@ -2099,18 +2222,39 @@
                   </div>
                 </div>`).join("") : `<div style="padding:14px 18px;color:var(--muted);font-size:13px;">Tidak ada permintaan buka blokir.</div>`;
 
+            const helpThreadsSorted = HELP_THREADS.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            const helpLogsHtml = helpThreadsSorted.length ? helpThreadsSorted.map(t => {
+                const msgs = t.messages || [];
+                const last = msgs[msgs.length - 1];
+                const preview = last ? (last.from === "owner" ? "Anda: " : "") + escapeHtml(last.text || "") : "Belum ada pesan";
+                const userData = getUserByUsername(t.username);
+                return `
+                <div class="help-log-row ${t.unreadOwner ? 'unread' : ''}" data-open-help="${escapeHtml(t.username)}">
+                  ${avatarHTML({ name: t.name, avatar: t.avatar, avatarType: t.avatarType, initials: (t.name||t.username||'?').slice(0,2).toUpperCase(), color: '#5B7A8C' }, { size: 40 })}
+                  <div style="flex:1;min-width:0;">
+                    <div class="settings-label" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">${escapeHtml(t.name || t.username)} ${verifiedBadge(t.verified)} ${labelBadge(userData && userData.label)}</div>
+                    <div class="settings-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${preview}</div>
+                  </div>
+                  ${t.unreadOwner ? `<span class="help-unread-dot"></span>` : ''}
+                </div>`;
+            }).join("") : `<div class="empty-owner-msg">Belum ada chat masuk dari pengguna.</div>`;
+
             const userRows = CHATS.filter(c => c.type === "dm").map(c => {
                 const userData = USERS.find(u => u.username === c.username);
                 const isBanned = userData ? userData.banned : c.banned;
+                const lbl = userData ? userData.label : null;
                 return `
                 <div class="settings-row">
                   ${avatarHTML(c, { size: 38 })}
-                  <div style="flex:1;">
-                    <div class="settings-label" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">${escapeHtml(c.name)} ${verifiedBadge(c.verified)} ${isBanned ? '<span style="color:#C9553B;font-size:11px;font-weight:700;">(BANNED)</span>' : ''}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div class="settings-label" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">${escapeHtml(c.name)} ${verifiedBadge(c.verified)} ${labelBadge(lbl)} ${isBanned ? '<span style="color:#C9553B;font-size:11px;font-weight:700;">(BANNED)</span>' : ''}</div>
                     <div class="settings-sub">@${escapeHtml(c.username)}</div>
                   </div>
-                  <button class="small-btn approve" data-uverify="${c.id}" style="margin-right:6px;">${c.verified ? 'Cabut' : 'Centang'}</button>
-                  <button class="small-btn reject" data-uban="${c.id}">${isBanned ? 'Buka' : 'Ban'}</button>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+                    <button class="small-btn label-btn" data-ulabel="${c.id}">${lbl ? 'Ubah Label' : '+ Label'}</button>
+                    <button class="small-btn approve" data-uverify="${c.id}">${c.verified ? 'Cabut' : 'Centang'}</button>
+                    <button class="small-btn reject" data-uban="${c.id}">${isBanned ? 'Buka' : 'Ban'}</button>
+                  </div>
                 </div>`;
             }).join("");
 
@@ -2167,6 +2311,10 @@
                     <button class="primary-btn small" id="owner-send-news">${svgIcon('news',13,'#fff',2.4)} Kirim Berita (Teks)</button>
                     <button class="primary-btn small" id="owner-send-news-media">${svgIcon('image',13,'#fff',2.4)} Kirim Berita + Media</button>
                   </div>
+
+                  <div class="settings-divider"></div>
+                  <div class="owner-subheader">${svgIcon('help-circle',15,'currentColor',2)} Logs Bantuan (Chat Masuk)${HELP_THREADS.some(t=>t.unreadOwner) ? ' <span class="help-unread-dot" style="position:static;margin-left:4px;"></span>' : ''}</div>
+                  <div id="help-logs-list">${helpLogsHtml}</div>
 
                   <div class="settings-divider"></div>
                   <div class="owner-subheader">${svgIcon('film',15,'currentColor',2)} Story Terkirim</div>
@@ -2265,6 +2413,13 @@
                     saveBanRequests(); }
             }));
 
+            el.querySelectorAll("[data-ulabel]").forEach(b => b.addEventListener("click", () => {
+                openLabelModal(Number(b.dataset.ulabel));
+            }));
+            el.querySelectorAll("[data-open-help]").forEach(row => row.addEventListener("click", () => {
+                openHelpThreadModal(row.dataset.openHelp);
+            }));
+
             el.querySelectorAll("[data-uverify]").forEach(b => b.addEventListener("click", () => {
                 const c = CHATS.find(x => x.id === Number(b.dataset.uverify));
                 if (c) { c.verified = !c.verified;
@@ -2324,6 +2479,186 @@
                     saveData();
                 }
             }));
+        }
+
+        /* ================= LABEL MODAL (Owner) ================= */
+        function openLabelModal(chatId) {
+            const c = CHATS.find(x => x.id === chatId);
+            if (!c) return;
+            const userData = USERS.find(u => u.username === c.username);
+            const current = userData ? (userData.label || "") : (c.label || "");
+            const isPreset = OWNER_LABEL_PRESETS.includes(current);
+            const backdrop = document.getElementById("modal-backdrop");
+            const sheet = document.getElementById("modal-sheet");
+            sheet.innerHTML = `
+                <div class="modal-title">Label untuk ${escapeHtml(c.name)}</div>
+                <select class="modal-input" id="label-select">
+                    <option value="">(Tidak ada label)</option>
+                    ${OWNER_LABEL_PRESETS.map(p => `<option value="${escapeHtml(p)}" ${current === p ? 'selected' : ''}>${escapeHtml(p)}</option>`).join("")}
+                    <option value="__custom__" ${(current && !isPreset) ? 'selected' : ''}>Custom...</option>
+                </select>
+                <input class="modal-input" id="label-custom-input" placeholder="Tulis label custom..." style="${(current && !isPreset) ? '' : 'display:none;'}" value="${(current && !isPreset) ? escapeHtml(current) : ''}" />
+                <div class="modal-actions">
+                    <button class="btn-ghost" id="modal-cancel">Batal</button>
+                    <button class="primary-btn" id="modal-save-label">Simpan</button>
+                </div>`;
+            backdrop.classList.add("open");
+            const sel = document.getElementById("label-select");
+            const customInput = document.getElementById("label-custom-input");
+            sel.addEventListener("change", () => {
+                customInput.style.display = sel.value === "__custom__" ? "block" : "none";
+                if (sel.value === "__custom__") customInput.focus();
+            });
+            document.getElementById("modal-cancel").addEventListener("click", closeModal);
+            document.getElementById("modal-save-label").addEventListener("click", () => {
+                let finalLabel = sel.value === "__custom__" ? customInput.value.trim() : sel.value;
+                if (!finalLabel) finalLabel = null;
+                c.label = finalLabel;
+                if (userData) { userData.label = finalLabel;
+                    saveUsers(); }
+                closeModal();
+                renderOwnerPanel();
+                renderMain();
+                saveData();
+            });
+        }
+
+        /* ================= BANTUAN OWNER -> LOGS (Firestore realtime) ================= */
+        // Chat Bantuan (id 999) di sisi pengguna disinkronkan ke koleksi 'helpChats' di Firestore,
+        // supaya semua pesan masuk keliatan di Panel Owner (Logs Bantuan) -- khusus Owner yang bisa lihat/bales.
+        let HELP_THREADS = []; // Hanya diisi & dipakai di sisi Owner
+        let helpThreadListenerAttached = false;
+        let myHelpChatListenerAttached = false;
+
+        function listenMyHelpChat() {
+            if (!hasCloud || !loggedInUser || isOwner || myHelpChatListenerAttached) return;
+            myHelpChatListenerAttached = true;
+            const welcomeMsg = { id: 0, from: "them",
+                text: "Halo! Ini layanan Bantuan. Tulis kendala Anda di sini, atau ketuk tombol di bawah untuk minta verifikasi centang biru.",
+                time: "09:00", status: "read" };
+            helpChatsCol().doc(loggedInUser.username).onSnapshot(snap => {
+                const help = CHATS.find(x => x.id === 999);
+                if (!help) return;
+                if (snap.exists) {
+                    const d = snap.data();
+                    const synced = (d.messages || []).map((m, i) => ({
+                        id: i + 1,
+                        from: m.from === "owner" ? "them" : "me",
+                        text: m.text || "",
+                        time: m.time || "Sekarang",
+                        status: m.from === "owner" ? "read" : "sent",
+                        mediaUrl: m.mediaUrl || null,
+                        mediaType: m.mediaType || null
+                    }));
+                    if (synced.length) help.messages = [welcomeMsg, ...synced];
+                    if (d.unreadUser) {
+                        helpChatsCol().doc(loggedInUser.username).update({ unreadUser: false }).catch(() => {});
+                    }
+                }
+                if (appBooted) {
+                    if (activeChatId === 999) renderMessages();
+                    renderMain();
+                }
+            }, err => console.error("listenMyHelpChat:", err));
+        }
+
+        function listenHelpChatsAll() {
+            if (!hasCloud || !isOwner || helpThreadListenerAttached) return;
+            helpThreadListenerAttached = true;
+            helpChatsCol().onSnapshot(snap => {
+                HELP_THREADS = snap.docs.map(d => d.data());
+                if (appBooted && isOwner) renderOwnerPanel();
+            }, err => console.error("listenHelpChatsAll:", err));
+        }
+
+        function sendHelpMessageAsUser(text) {
+            if (!hasCloud || !loggedInUser || isOwner) return;
+            const ref = helpChatsCol().doc(loggedInUser.username);
+            const msg = { from: "user", text, time: "Sekarang" };
+            ref.set({
+                username: loggedInUser.username,
+                name: ME.name,
+                avatar: ME.avatar || null,
+                avatarType: ME.avatarType || null,
+                verified: !!ME.verified,
+                updatedAt: Date.now(),
+                unreadOwner: true
+            }, { merge: true }).then(() => ref.update({
+                messages: firebase.firestore.FieldValue.arrayUnion(msg)
+            })).catch(e => { console.error("sendHelpMessageAsUser:", e); alert("Gagal mengirim pesan ke Owner, cek koneksi internet."); });
+        }
+
+        function sendHelpReplyAsOwner(username, text) {
+            if (!hasCloud || !isOwner) return;
+            const ref = helpChatsCol().doc(username);
+            const msg = { from: "owner", text, time: "Sekarang" };
+            ref.update({
+                messages: firebase.firestore.FieldValue.arrayUnion(msg),
+                updatedAt: Date.now(),
+                unreadUser: true,
+                unreadOwner: false
+            }).catch(e => console.error("sendHelpReplyAsOwner:", e));
+        }
+
+        function openHelpThreadModal(username) {
+            const thread = HELP_THREADS.find(t => t.username === username);
+            if (!thread) return;
+            if (thread.unreadOwner) {
+                helpChatsCol().doc(username).update({ unreadOwner: false }).catch(() => {});
+            }
+            const backdrop = document.getElementById("modal-backdrop");
+            const sheet = document.getElementById("modal-sheet");
+            sheet.classList.add("help-thread-sheet");
+            const renderThreadBody = () => {
+                const t = HELP_THREADS.find(x => x.username === username) || thread;
+                const msgs = t.messages || [];
+                return msgs.map(m => `
+                    <div class="bubble ${m.from === 'owner' ? 'mine' : 'theirs'}">
+                      ${m.text ? `<div class="bubble-text" style="white-space:pre-line;">${escapeHtml(m.text)}</div>` : ''}
+                      <div class="bubble-meta"><span class="bubble-time">${escapeHtml(m.time || '')}</span></div>
+                    </div>`).join("");
+            };
+            sheet.innerHTML = `
+                <div class="modal-title" style="display:flex;align-items:center;gap:8px;">
+                    ${avatarHTML({ name: thread.name, avatar: thread.avatar, avatarType: thread.avatarType, initials: (thread.name||username||'?').slice(0,2).toUpperCase(), color: '#5B7A8C' }, { size: 32 })}
+                    <span>${escapeHtml(thread.name || username)} ${verifiedBadge(thread.verified)}</span>
+                </div>
+                <div id="help-thread-messages" class="help-thread-messages">${renderThreadBody()}</div>
+                <div class="help-thread-composer">
+                    <input class="modal-input" id="help-reply-input" placeholder="Balas sebagai Owner..." style="margin-bottom:0;" />
+                    <button class="primary-btn" id="help-reply-send">${svgIcon('send',15,'#fff')}</button>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-ghost" id="modal-cancel">Tutup</button>
+                </div>`;
+            backdrop.classList.add("open");
+            const msgsWrap = document.getElementById("help-thread-messages");
+            msgsWrap.scrollTop = msgsWrap.scrollHeight;
+            document.getElementById("modal-cancel").addEventListener("click", () => {
+                sheet.classList.remove("help-thread-sheet");
+                closeModal();
+            });
+            const input = document.getElementById("help-reply-input");
+            const send = () => {
+                const text = input.value.trim();
+                if (!text) return;
+                sendHelpReplyAsOwner(username, text);
+                input.value = "";
+            };
+            document.getElementById("help-reply-send").addEventListener("click", send);
+            input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); send(); } });
+            // live-update thread body kalau ada balasan/pesan baru masuk selagi modal ini terbuka
+            const liveUpdateInterval = setInterval(() => {
+                if (!document.getElementById("modal-backdrop").classList.contains("open")) {
+                    clearInterval(liveUpdateInterval);
+                    return;
+                }
+                const wrap = document.getElementById("help-thread-messages");
+                if (wrap) {
+                    wrap.innerHTML = renderThreadBody();
+                    wrap.scrollTop = wrap.scrollHeight;
+                }
+            }, 1500);
         }
 
         function sendOwnerStory(text, mediaUrl, mediaType) {
