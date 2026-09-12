@@ -72,7 +72,7 @@
         // PENTING: username & password Owner TIDAK ADA di file ini lagi.
         // Itu disimpan sebagai Environment Variable di Vercel dan dicek lewat /api/verify-owner
         // (lihat folder /api), jadi tidak akan kelihatan siapa pun walau buka source code / inspect element.
-        const OWNER_DOC_ID = "__owner__"; // id dokumen profil Owner di Firestore (bukan rahasia, cuma id data)
+        const OWNER_DOC_ID = "owner-account"; // id dokumen profil Owner di Firestore (bukan rahasia, cuma id data)
 
         let loggedInUser = null;
         let isOwner = false;
