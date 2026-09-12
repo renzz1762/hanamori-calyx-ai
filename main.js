@@ -223,8 +223,18 @@
             let user = null;
             if (isOwnerLogin) {
                 user = USERS.find(u => u.username === OWNER_DOC_ID) || null;
-                if (!user) { await ensureOwnerAccount();
-                    user = USERS.find(u => u.username === OWNER_DOC_ID); }
+                if (!user) {
+                    await ensureOwnerAccount();
+                    try {
+                        const snap = await usersCol().doc(OWNER_DOC_ID).get();
+                        if (snap.exists) {
+                            user = snap.data();
+                            if (!USERS.find(u => u.username === OWNER_DOC_ID)) USERS.push(user);
+                        }
+                    } catch (e) {
+                        showDebugBanner("❌ Gagal ambil akun Owner dari Firestore: " + (e && e.message ? e.message : e));
+                    }
+                }
             } else {
                 user = USERS.find(u => u.username === username && u.password === password) || null;
             }
