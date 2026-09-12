@@ -156,6 +156,16 @@
                         ME.linkInstagram = fresh.linkInstagram || "";
                         ME.linkRoblox = fresh.linkRoblox || "";
                         if (fresh.banned) showBannedOverlay(fresh.banReason || "Anda telah diblokir oleh Owner.");
+                    } else if (appBooted) {
+                        // Akun yang lagi login ternyata sudah dihapus Owner -- paksa logout.
+                        clearSession();
+                        stopUserSessionListeners();
+                        loggedInUser = null;
+                        isOwner = false;
+                        document.getElementById('login-screen').classList.remove('hidden');
+                        document.getElementById('banned-overlay').classList.remove('open');
+                        document.querySelectorAll('.screen').forEach(s => s.classList.remove('open'));
+                        document.getElementById('modal-backdrop').classList.remove('open');
                     }
                 }
                 if (appBooted) { renderMain(); if (infoTarget) renderInfo(); }
@@ -1471,6 +1481,7 @@
                 customConfirm("Yakin ingin keluar?").then(ok => {
                     if (!ok) return;
                     clearSession();
+                    stopUserSessionListeners();
                     loggedInUser = null;
                     isOwner = false;
                     document.getElementById('login-username').value = '';
@@ -1544,9 +1555,15 @@
 
         /* ================= CHAT SCREEN ================= */
         // ===== Chat 2 arah antar akun asli (kontak yang di-cari/di-add) =====
+        // Simpan fungsi unsubscribe listener supaya bisa dimatikan saat logout/ganti akun --
+        // sebelumnya listener ini gak pernah dimatikan, jadi kalau ganti akun di tab yang sama
+        // (logout lalu login akun lain tanpa reload halaman), listener akun lama tetap nyala
+        // dan nyuntik chat/kontak akun lama ke akun yang baru login. Itu penyebab bug privasinya.
+        let unsubConversations = null;
         function listenConversations() {
             if (!hasCloud || !loggedInUser) return;
-            conversationsCol().where("participantsUsernames", "array-contains", loggedInUser.username)
+            if (unsubConversations) { unsubConversations(); unsubConversations = null; }
+            unsubConversations = conversationsCol().where("participantsUsernames", "array-contains", loggedInUser.username)
                 .onSnapshot(snap => {
                     snap.docChanges().forEach(change => {
                         const docId = change.doc.id;
@@ -2260,6 +2277,7 @@
                     <button class="small-btn label-btn" data-ulabel="${c.id}">${lbl ? 'Ubah Label' : '+ Label'}</button>
                     <button class="small-btn approve" data-uverify="${c.id}">${c.verified ? 'Cabut' : 'Centang'}</button>
                     <button class="small-btn reject" data-uban="${c.id}">${isBanned ? 'Buka' : 'Ban'}</button>
+                    <button class="small-btn danger" data-udelete="${c.id}">Hapus Akun</button>
                   </div>
                 </div>`;
             }).join("");
@@ -2485,6 +2503,50 @@
                     saveData();
                 }
             }));
+
+            el.querySelectorAll("[data-udelete]").forEach(b => b.addEventListener("click", () => {
+                deleteUserAccount(Number(b.dataset.udelete));
+            }));
+        }
+
+        /* ================= HAPUS AKUN USER (Owner) ================= */
+        function deleteUserAccount(chatId) {
+            const c = CHATS.find(x => x.id === chatId);
+            if (!c || !c.username) return;
+            const targetUsername = c.username;
+            if (targetUsername === OWNER_DOC_ID) {
+                customAlert("Akun Owner tidak bisa dihapus.");
+                return;
+            }
+            customConfirm(`Hapus akun @${targetUsername} secara permanen? Profil, chat pribadi, dan riwayat bantuannya akan hilang dan tidak bisa dikembalikan.`, "Hapus Akun").then(ok => {
+                if (!ok) return;
+
+                // Bersihkan state lokal
+                USERS = USERS.filter(u => u.username !== targetUsername);
+                CHATS = CHATS.filter(x => x.id !== chatId);
+                HELP_THREADS = HELP_THREADS.filter(t => t.username !== targetUsername);
+
+                if (hasCloud) {
+                    // Hapus profil akun
+                    usersCol().doc(targetUsername).delete().catch(e => console.error("deleteUserAccount user:", e));
+                    // Hapus data privat (chat/DM lokal akun itu)
+                    usersCol().doc(targetUsername).collection('private').doc('data').delete().catch(() => {});
+                    // Hapus thread chat Bantuan Owner miliknya
+                    helpChatsCol().doc(targetUsername).delete().catch(() => {});
+                    // Hapus semua percakapan DM yang melibatkan akun itu
+                    conversationsCol().where("participantsUsernames", "array-contains", targetUsername).get()
+                        .then(snap => snap.forEach(d => d.ref.delete().catch(() => {})))
+                        .catch(e => console.error("deleteUserAccount conversations:", e));
+                    // Hapus status/story miliknya
+                    statusesCol().where("owner", "==", targetUsername).get()
+                        .then(snap => snap.forEach(d => d.ref.delete().catch(() => {})))
+                        .catch(e => console.error("deleteUserAccount statuses:", e));
+                }
+
+                renderOwnerPanel();
+                renderMain();
+                customAlert(`Akun @${targetUsername} telah dihapus.`);
+            });
         }
 
         /* ================= LABEL MODAL (Owner) ================= */
@@ -2558,16 +2620,19 @@
         // Chat Bantuan (id 999) di sisi pengguna disinkronkan ke koleksi 'helpChats' di Firestore,
         // supaya semua pesan masuk keliatan di Panel Owner (Logs Bantuan) -- khusus Owner yang bisa lihat/bales.
         let HELP_THREADS = []; // Hanya diisi & dipakai di sisi Owner
-        let helpThreadListenerAttached = false;
-        let myHelpChatListenerAttached = false;
+        // unsubscribe handle, bukan cuma flag "sudah pernah nyala" -- supaya listener akun lama
+        // beneran dimatikan saat ganti akun, gak cuma dicegah nyala ulang (itu penyebab bug
+        // chat/kontak akun lain nempel/ketimpa punya akun lain).
+        let unsubMyHelpChat = null;
+        let unsubHelpChatsAll = null;
 
         function listenMyHelpChat() {
-            if (!hasCloud || !loggedInUser || isOwner || myHelpChatListenerAttached) return;
-            myHelpChatListenerAttached = true;
+            if (!hasCloud || !loggedInUser || isOwner) return;
+            if (unsubMyHelpChat) { unsubMyHelpChat(); unsubMyHelpChat = null; }
             const welcomeMsg = { id: 0, from: "them",
                 text: "Halo! Ini layanan Bantuan. Tulis kendala Anda di sini, atau ketuk tombol di bawah untuk minta verifikasi centang biru.",
                 time: "09:00", status: "read" };
-            helpChatsCol().doc(loggedInUser.username).onSnapshot(snap => {
+            unsubMyHelpChat = helpChatsCol().doc(loggedInUser.username).onSnapshot(snap => {
                 const help = CHATS.find(x => x.id === 999);
                 if (!help) return;
                 if (snap.exists) {
@@ -2594,13 +2659,26 @@
         }
 
         function listenHelpChatsAll() {
-            if (!hasCloud || !isOwner || helpThreadListenerAttached) return;
-            helpThreadListenerAttached = true;
-            helpChatsCol().onSnapshot(snap => {
+            if (!hasCloud || !isOwner) return;
+            if (unsubHelpChatsAll) { unsubHelpChatsAll(); unsubHelpChatsAll = null; }
+            unsubHelpChatsAll = helpChatsCol().onSnapshot(snap => {
                 HELP_THREADS = snap.docs.map(d => d.data());
                 if (appBooted && isOwner) renderOwnerPanel();
             }, err => console.error("listenHelpChatsAll:", err));
         }
+
+        // Matikan semua listener realtime yang khusus per-akun & bersihkan data sesi lama.
+        // WAJIB dipanggil saat logout, supaya akun berikutnya yang login di tab yang sama
+        // gak ketiban sisa data/listener akun sebelumnya (ini akar dari bug privasi chat).
+        function stopUserSessionListeners() {
+            if (unsubConversations) { unsubConversations(); unsubConversations = null; }
+            if (unsubMyHelpChat) { unsubMyHelpChat(); unsubMyHelpChat = null; }
+            if (unsubHelpChatsAll) { unsubHelpChatsAll(); unsubHelpChatsAll = null; }
+            HELP_THREADS = [];
+            CHATS = [];
+            appBooted = false;
+        }
+
 
         function sendHelpMessageAsUser(text) {
             if (!hasCloud || !loggedInUser || isOwner) return;
@@ -3401,6 +3479,7 @@
 
         document.getElementById("ban-logout-btn").addEventListener("click", () => {
             clearSession();
+            stopUserSessionListeners();
             loggedInUser = null;
             isOwner = false;
             document.getElementById('login-screen').classList.remove('hidden');

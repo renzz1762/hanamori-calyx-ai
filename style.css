@@ -1289,6 +1289,10 @@
             background: #F3E4DE;
             color: #8A3B2A;
         }
+        .small-btn.danger {
+            background: #C9553B;
+            color: #fff;
+        }
         .toggle-switch {
             width: 44px;
             height: 25px;
